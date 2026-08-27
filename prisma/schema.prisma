@@ -70,12 +70,38 @@ enum AgentTargetType {
 enum ServiceCategory {
   MACHINERY_RENTAL
   STORAGE
+  COLD_STORAGE
   LOGISTICS
   TRANSPORT
   LABOR
-  AQUACULTURE_SERVICE
+  SOIL_TESTING
+  WATER_TESTING
   AGRICULTURE_SERVICE
+  AQUACULTURE_SERVICE
+  CONSULTING
   OTHER
+}
+
+enum ServiceStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ServiceRequestStatus {
+  OPEN
+  QUOTATION_SUBMITTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceQuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
 }
 
 enum ProductStatus {
@@ -141,6 +167,7 @@ enum NotificationType {
   MESSAGE
   VERIFICATION_UPDATE
   PRODUCT_MODERATION
+  SERVICE_UPDATE
 }
 
 enum NotificationChannel {
@@ -255,6 +282,8 @@ model User {
   notificationPreferences    NotificationPreference[]
   verificationRequests       VerificationRequest[]     @relation("UserVerifications")
   verificationReviews        VerificationRequest[]     @relation("ReviewerVerifications")
+  serviceRequests            ServiceRequest[]          @relation("RequesterServiceRequests")
+  serviceQuotations          ServiceQuotation[]        @relation("ProviderServiceQuotations")
   auditLogs                  AuditLog[]
 
   @@index([email])
@@ -404,16 +433,17 @@ model AgentAssignment {
 // ----------------------------------------------------
 
 model ProviderProfile {
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessName String
-  description  String?
-  isVerified   Boolean  @default(false)
-  addressId    String?
-  address      Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName    String
+  description     String?
+  isVerified      Boolean  @default(false)
+  experienceYears Int?     @default(0)
+  addressId       String?
+  address         Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   services ServiceListing[]
 
@@ -429,19 +459,94 @@ model ServiceListing {
   title             String
   description       String
   category          ServiceCategory
+  sector            Sector          @default(AGRICULTURE)
   pricingModel      String
   basePrice         Decimal         @db.Decimal(12, 2)
   coverImageUrl     String?
+  serviceArea       String?
+  status            ServiceStatus   @default(ACTIVE)
   isAvailable       Boolean         @default(true)
   locationDistrict  String?
   locationState     String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  requests ServiceRequest[]
+
   @@index([providerProfileId])
   @@index([category])
+  @@index([sector])
+  @@index([status])
   @@index([isAvailable])
+  @@index([locationState, locationDistrict])
   @@map("service_listings")
+}
+
+model ServiceRequest {
+  id                      String               @id @default(uuid())
+  requestNumber           String               @unique
+  serviceId               String
+  service                 ServiceListing       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  requesterId             String
+  requester               User                 @relation("RequesterServiceRequests", fields: [requesterId], references: [id], onDelete: Restrict)
+  requiredDate            DateTime
+  quantityOrScale         String
+  requirements            String
+  locationVillageOrStreet String?
+  locationCityOrTown      String
+  locationDistrict        String
+  locationState           String
+  notes                   String?
+  status                  ServiceRequestStatus @default(OPEN)
+  acceptedQuotationId     String?              @unique
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+
+  quotations ServiceQuotation[]
+  timeline   ServiceRequestTimeline[]
+
+  @@index([serviceId])
+  @@index([requesterId])
+  @@index([status])
+  @@index([requestNumber])
+  @@map("service_requests")
+}
+
+model ServiceQuotation {
+  id               String                 @id @default(uuid())
+  quotationNumber  String                 @unique
+  serviceRequestId String
+  serviceRequest   ServiceRequest         @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  providerId       String
+  provider         User                   @relation("ProviderServiceQuotations", fields: [providerId], references: [id], onDelete: Restrict)
+  amount           Decimal                @db.Decimal(12, 2)
+  currency         String                 @default("INR")
+  validUntil       DateTime
+  terms            String?
+  notes            String?
+  status           ServiceQuotationStatus @default(PENDING)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@index([serviceRequestId])
+  @@index([providerId])
+  @@index([status])
+  @@index([quotationNumber])
+  @@map("service_quotations")
+}
+
+model ServiceRequestTimeline {
+  id               String               @id @default(uuid())
+  serviceRequestId String
+  serviceRequest   ServiceRequest       @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  status           ServiceRequestStatus
+  note             String?
+  actorId          String?
+  createdAt        DateTime             @default(now())
+
+  @@index([serviceRequestId])
+  @@index([status])
+  @@map("service_request_timelines")
 }
 
 // ----------------------------------------------------
