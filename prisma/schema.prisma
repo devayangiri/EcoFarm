@@ -110,6 +110,7 @@ enum ProductStatus {
   ACTIVE
   PAUSED
   OUT_OF_STOCK
+  REJECTED
   ARCHIVED
 }
 
@@ -272,6 +273,38 @@ enum CheckoutSessionStatus {
   CANCELLED
 }
 
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+  ESCALATED
+  CLOSED
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportTargetType {
+  PRODUCT
+  USER
+  BUSINESS
+  SERVICE
+  MESSAGE
+  REVIEW
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+  REMOVED
+}
+
 // ----------------------------------------------------
 // USER & IDENTITY
 // ----------------------------------------------------
@@ -319,6 +352,14 @@ model User {
   serviceRequests            ServiceRequest[]          @relation("RequesterServiceRequests")
   serviceQuotations          ServiceQuotation[]        @relation("ProviderServiceQuotations")
   auditLogs                  AuditLog[]
+  disputesRaised             Dispute[]                 @relation("DisputesRaised")
+  disputesAgainst            Dispute[]                 @relation("DisputesAgainst")
+  disputesResolved           Dispute[]                 @relation("DisputesResolved")
+  reportsMade                Report[]                  @relation("ReportsMade")
+  reportsResolved            Report[]                  @relation("ReportsResolved")
+  reviewsAuthored            Review[]                  @relation("ReviewsAuthored")
+  reviewsModerated           Review[]                  @relation("ReviewsModerated")
+  adminSettingsUpdated       AdminSetting[]            @relation("AdminSettingsUpdated")
 
   @@index([email])
   @@index([phone])
@@ -620,6 +661,7 @@ model ServiceRequest {
 
   quotations ServiceQuotation[]
   timeline   ServiceRequestTimeline[]
+  disputes   Dispute[]
 
   @@index([serviceId])
   @@index([requesterId])
@@ -856,6 +898,7 @@ model Order {
 
   items    OrderItem[]
   timeline OrderTimeline[]
+  disputes Dispute[]
 
   @@index([orderGroupId])
   @@index([sellerId])
@@ -1217,5 +1260,109 @@ model BuyerRequirement {
   @@index([status])
   @@index([locationState, locationDistrict])
   @@map("buyer_requirements")
+}
+
+// ----------------------------------------------------
+// DISPUTES & COMPLAINTS
+// ----------------------------------------------------
+
+model Dispute {
+  id               String          @id @default(uuid())
+  orderId          String?
+  order            Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  serviceRequestId String?
+  serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  raisedById       String
+  raisedBy         User            @relation("DisputesRaised", fields: [raisedById], references: [id], onDelete: Cascade)
+  respondentId     String?
+  respondent       User?           @relation("DisputesAgainst", fields: [respondentId], references: [id], onDelete: SetNull)
+  title            String
+  reason           String
+  description      String
+  status           DisputeStatus   @default(OPEN)
+  resolution       String?
+  resolvedById     String?
+  resolvedBy       User?           @relation("DisputesResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt       DateTime?
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([status])
+  @@index([raisedById])
+  @@index([respondentId])
+  @@index([orderId])
+  @@index([serviceRequestId])
+  @@map("disputes")
+}
+
+// ----------------------------------------------------
+// MODERATION REPORTS
+// ----------------------------------------------------
+
+model Report {
+  id              String           @id @default(uuid())
+  reporterId      String
+  reporter        User             @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType      ReportTargetType
+  targetId        String
+  reason          String
+  description     String
+  status          ReportStatus     @default(OPEN)
+  resolutionNotes String?
+  resolvedById    String?
+  resolvedBy      User?            @relation("ReportsResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([status])
+  @@index([targetType, targetId])
+  @@index([reporterId])
+  @@map("reports")
+}
+
+// ----------------------------------------------------
+// REVIEWS & REPUTATION
+// ----------------------------------------------------
+
+model Review {
+  id               String       @id @default(uuid())
+  authorId         String
+  author           User         @relation("ReviewsAuthored", fields: [authorId], references: [id], onDelete: Cascade)
+  targetType       String       // "PRODUCT" | "SELLER" | "SERVICE" | "AGENT"
+  targetId         String
+  rating           Int          // 1 to 5
+  comment          String?
+  status           ReviewStatus @default(APPROVED)
+  moderatedById    String?
+  moderatedBy      User?        @relation("ReviewsModerated", fields: [moderatedById], references: [id], onDelete: SetNull)
+  moderationReason String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([targetType, targetId])
+  @@index([authorId])
+  @@index([status])
+  @@map("reviews")
+}
+
+// ----------------------------------------------------
+// PLATFORM & ADMIN SETTINGS
+// ----------------------------------------------------
+
+model AdminSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  category    String   @default("GENERAL")
+  description String?
+  updatedById String?
+  updatedBy   User?    @relation("AdminSettingsUpdated", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("admin_settings")
 }
 

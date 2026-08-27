@@ -68,12 +68,34 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "AGENT_MANAGE_LEADS",
     "AGENT_MANAGE_TASKS",
     "AGENT_REVIEW_VERIFICATION",
+    "ADMIN_VIEW_DASHBOARD",
+    "ADMIN_VIEW_USERS",
+    "ADMIN_EDIT_USERS",
+    "ADMIN_MANAGE_ROLES",
+    "ADMIN_SUSPEND_USERS",
+    "ADMIN_VIEW_PRODUCTS",
+    "ADMIN_MODERATE_PRODUCTS",
+    "ADMIN_VIEW_SERVICES",
+    "ADMIN_MODERATE_SERVICES",
+    "ADMIN_VIEW_VERIFICATIONS",
+    "ADMIN_REVIEW_VERIFICATIONS",
+    "ADMIN_VIEW_ORDERS",
+    "ADMIN_MANAGE_ORDER_ISSUES",
+    "ADMIN_VIEW_DISPUTES",
+    "ADMIN_MANAGE_DISPUTES",
+    "ADMIN_VIEW_REVIEWS",
+    "ADMIN_MODERATE_REVIEWS",
+    "ADMIN_VIEW_REPORTS",
+    "ADMIN_RESOLVE_REPORTS",
+    "ADMIN_VIEW_ANALYTICS",
+    "ADMIN_VIEW_NOTIFICATIONS",
+    "ADMIN_MANAGE_NOTIFICATIONS",
+    "ADMIN_VIEW_AUDIT_LOGS",
+    "ADMIN_MANAGE_SETTINGS",
     "ADMIN_MANAGE_USERS",
     "ADMIN_MANAGE_PRODUCTS",
     "ADMIN_MANAGE_VERIFICATION",
     "ADMIN_MANAGE_ORDERS",
-    "ADMIN_VIEW_ANALYTICS",
-    "ADMIN_MANAGE_SETTINGS",
   ] as const,
 };
 
@@ -188,6 +210,20 @@ export async function requirePermission(permission: Permission): Promise<UserSes
   const session = await requireAuth();
   if (!hasPermission(session.role, permission)) {
     throw AppError.forbidden("Access denied: missing required permission");
+  }
+  return session;
+}
+
+/**
+ * Guard that enforces user is an ADMIN and has a specific administrative permission
+ */
+export async function requireAdminPermission(permission: Permission): Promise<UserSession> {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN") {
+    throw AppError.forbidden("Administrative access required");
+  }
+  if (!hasPermission(session.role, permission)) {
+    throw AppError.forbidden(`Access denied: missing ${permission} permission`);
   }
   return session;
 }
