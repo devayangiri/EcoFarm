@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-plus-jakarta-sans: "Plus Jakarta Sans", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-surface-dim;
+  }
+  body {
+    @apply bg-surface text-on-surface font-body antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight text-on-surface;
+  }
+}
+
+/* Custom Stitch Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8f9ff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccdbf4;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0891b2;
+}
