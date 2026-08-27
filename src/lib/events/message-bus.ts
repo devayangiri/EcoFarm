@@ -1,11 +1,15 @@
 import { EventEmitter } from "events";
 
-export type MessageEventType = "MESSAGE_CREATED" | "MESSAGE_READ" | "CONVERSATION_UPDATED";
+export type MessageEventType =
+  | "MESSAGE_CREATED"
+  | "MESSAGE_READ"
+  | "CONVERSATION_UPDATED"
+  | "NOTIFICATION_CREATED";
 
 export interface MessageEventPayload {
   type: MessageEventType;
   eventId: string;
-  conversationId: string;
+  conversationId?: string;
   timestamp: string;
   data: any;
 }
