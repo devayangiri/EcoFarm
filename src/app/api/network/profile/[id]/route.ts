@@ -1,0 +1,23 @@
+import { NextRequest, NextResponse } from "next/server";
+import { NetworkService } from "@/services/network.service";
+import { getCurrentUser } from "@/lib/rbac";
+import { handleError } from "@/lib/errors";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getCurrentUser();
+    const profile = await NetworkService.getPublicProfile(params.id, session?.userId);
+
+    return NextResponse.json({
+      success: true,
+      data: profile,
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+}

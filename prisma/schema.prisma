@@ -709,15 +709,27 @@ model NetworkProfile {
   displayName       String
   headline          String?
   bio               String?
+  participantType   String?
+  businessCategory  String?
+  sector            Sector?  @default(AGRICULTURE)
+  district          String?
+  state             String?
+  avatarUrl         String?
   websiteUrl        String?
   isBusiness        Boolean  @default(false)
   businessRegNumber String?
+  isVerified        Boolean  @default(false)
   connectionCount   Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@index([userId])
   @@index([isBusiness])
+  @@index([participantType])
+  @@index([businessCategory])
+  @@index([sector])
+  @@index([state, district])
+  @@index([isVerified])
   @@map("network_profiles")
 }
 
