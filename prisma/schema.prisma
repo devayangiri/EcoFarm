@@ -1,5 +1,5 @@
-// Agri-Aqua Network - Prisma Schema
-// Phase 2: Authentication, Sessions & RBAC Engine
+// Agri-Aqua Network - Production Prisma Schema
+// Phase 3: PostgreSQL Architecture, Multi-Vendor Domain Entities, Auditing & Indexes
 
 generator client {
   provider = "prisma-client-js"
@@ -10,7 +10,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Baseline system health model for connection probing
+// ----------------------------------------------------
+// SYSTEM & HEALTH
+// ----------------------------------------------------
+
 model SystemHealth {
   id        String   @id @default(uuid())
   status    String   @default("ok")
@@ -19,26 +22,9 @@ model SystemHealth {
   @@map("system_health")
 }
 
-// User model for Authentication & RBAC Engine
-model User {
-  id           String     @id @default(uuid())
-  fullName     String
-  email        String     @unique
-  phone        String?    @unique
-  passwordHash String
-  role         UserRole   @default(FARMER)
-  status       UserStatus @default(PENDING_VERIFICATION)
-  tokenVersion Int        @default(0)
-  lastLoginAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@index([email])
-  @@index([phone])
-  @@index([role])
-  @@index([status])
-  @@map("users")
-}
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
 
 enum UserRole {
   FARMER
@@ -52,4 +38,751 @@ enum UserStatus {
   ACTIVE
   PENDING_VERIFICATION
   SUSPENDED
+}
+
+enum Sector {
+  AGRICULTURE
+  AQUACULTURE
+}
+
+enum BuyerType {
+  INDIVIDUAL
+  WHOLESALER
+  RETAILER
+  PROCESSOR
+  EXPORTER
+  INSTITUTION
+  OTHER
+}
+
+enum AgentAssignmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum AgentTargetType {
+  FARMER
+  BUYER
+  BUSINESS
+}
+
+enum ServiceCategory {
+  MACHINERY_RENTAL
+  STORAGE
+  LOGISTICS
+  TRANSPORT
+  LABOR
+  AQUACULTURE_SERVICE
+  AGRICULTURE_SERVICE
+  OTHER
+}
+
+enum ProductStatus {
+  DRAFT
+  PENDING_MODERATION
+  ACTIVE
+  PAUSED
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+enum OrderGroupStatus {
+  PAYMENT_PENDING
+  PROCESSING
+  PARTIALLY_FULFILLED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED_BY_SELLER
+  CANCELLED_BY_BUYER
+  DISPUTED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  COD
+  BANK_TRANSFER
+  RAZORPAY
+  STRIPE
+  MOCK
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum ConnectionRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  BLOCKED
+}
+
+enum NotificationType {
+  SYSTEM
+  ORDER_UPDATE
+  PAYMENT_UPDATE
+  CONNECTION_REQUEST
+  MESSAGE
+  VERIFICATION_UPDATE
+  PRODUCT_MODERATION
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum VerificationType {
+  FARMER_LAND
+  BUYER_BUSINESS
+  AGENT_CREDENTIALS
+  SERVICE_PROVIDER_BUSINESS
+  IDENTITY
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum VerificationDocType {
+  IDENTITY
+  LAND_OWNERSHIP
+  GST
+  BUSINESS_REGISTRATION
+  TAX
+  OTHER
+}
+
+enum MessageContextType {
+  PRODUCT
+  ORDER
+  SERVICE
+  BUSINESS
+  GENERAL
+}
+
+// ----------------------------------------------------
+// USER & IDENTITY
+// ----------------------------------------------------
+
+model User {
+  id           String     @id @default(uuid())
+  fullName     String
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(FARMER)
+  status       UserStatus @default(PENDING_VERIFICATION)
+  tokenVersion Int        @default(0)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Profile extensions
+  farmerProfile   FarmerProfile?
+  buyerProfile    BuyerProfile?
+  agentProfile    AgentProfile?
+  providerProfile ProviderProfile?
+  networkProfile  NetworkProfile?
+
+  // Domain Relations
+  addresses                  Address[]
+  products                   Product[]                 @relation("UserProducts")
+  orderGroups                OrderGroup[]              @relation("BuyerOrderGroups")
+  sellerOrders               Order[]                   @relation("SellerOrders")
+  sentConnectionRequests     ConnectionRequest[]       @relation("SentRequests")
+  receivedConnectionRequests ConnectionRequest[]       @relation("ReceivedRequests")
+  connectionsA               BusinessConnection[]      @relation("ConnectionsA")
+  connectionsB               BusinessConnection[]      @relation("ConnectionsB")
+  conversationParticipants   ConversationParticipant[]
+  messagesSent               Message[]                 @relation("UserSentMessages")
+  notifications              Notification[]
+  notificationPreferences    NotificationPreference[]
+  verificationRequests       VerificationRequest[]     @relation("UserVerifications")
+  verificationReviews        VerificationRequest[]     @relation("ReviewerVerifications")
+  auditLogs                  AuditLog[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+// ----------------------------------------------------
+// ADDRESS ARCHITECTURE
+// ----------------------------------------------------
+
+model Address {
+  id              String   @id @default(uuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  villageOrStreet String
+  cityOrTown      String
+  district        String
+  state           String
+  pincode         String
+  latitude        Float?
+  longitude       Float?
+  country         String   @default("India")
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  farms            Farm[]
+  farmerProfiles   FarmerProfile[]
+  buyerProfiles    BuyerProfile[]
+  providerProfiles ProviderProfile[]
+
+  @@index([pincode])
+  @@index([district, state])
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ----------------------------------------------------
+// FARMER & FARM ARCHITECTURE
+// ----------------------------------------------------
+
+model FarmerProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experienceYears Int?     @default(0)
+  avatarUrl       String?
+  isVerified      Boolean  @default(false)
+  addressId       String?
+  address         Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  farms Farm[]
+
+  @@index([userId])
+  @@index([isVerified])
+  @@map("farmer_profiles")
+}
+
+model Farm {
+  id              String        @id @default(uuid())
+  farmerProfileId String
+  farmerProfile   FarmerProfile @relation(fields: [farmerProfileId], references: [id], onDelete: Cascade)
+  name            String
+  sector          Sector        @default(AGRICULTURE)
+  totalAreaAcres  Decimal       @db.Decimal(10, 2)
+  waterSourceType String?
+  soilType        String?
+  addressId       String?
+  address         Address?      @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([farmerProfileId])
+  @@index([sector])
+  @@map("farms")
+}
+
+// ----------------------------------------------------
+// BUYER ARCHITECTURE
+// ----------------------------------------------------
+
+model BuyerProfile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName String?
+  buyerType   BuyerType @default(INDIVIDUAL)
+  gstNumber   String?
+  addressId   String?
+  address     Address?  @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([buyerType])
+  @@map("buyer_profiles")
+}
+
+// ----------------------------------------------------
+// AGENT ARCHITECTURE
+// ----------------------------------------------------
+
+model AgentProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeNumber         String   @unique
+  assignedRegionState String
+  assignedDistricts   String[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  assignments AgentAssignment[]
+
+  @@index([userId])
+  @@index([assignedRegionState])
+  @@map("agent_profiles")
+}
+
+model AgentAssignment {
+  id             String                @id @default(uuid())
+  agentProfileId String
+  agentProfile   AgentProfile          @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  assignedById   String?
+  targetType     AgentTargetType
+  targetUserId   String
+  status         AgentAssignmentStatus @default(ACTIVE)
+  notes          String?
+  assignedAt     DateTime              @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([agentProfileId])
+  @@index([targetUserId])
+  @@index([status])
+  @@map("agent_assignments")
+}
+
+// ----------------------------------------------------
+// SERVICE PROVIDER ARCHITECTURE
+// ----------------------------------------------------
+
+model ProviderProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName String
+  description  String?
+  isVerified   Boolean  @default(false)
+  addressId    String?
+  address      Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  services ServiceListing[]
+
+  @@index([userId])
+  @@index([isVerified])
+  @@map("provider_profiles")
+}
+
+model ServiceListing {
+  id                String          @id @default(uuid())
+  providerProfileId String
+  providerProfile   ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  title             String
+  description       String
+  category          ServiceCategory
+  pricingModel      String
+  basePrice         Decimal         @db.Decimal(12, 2)
+  coverImageUrl     String?
+  isAvailable       Boolean         @default(true)
+  locationDistrict  String?
+  locationState     String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([providerProfileId])
+  @@index([category])
+  @@index([isAvailable])
+  @@map("service_listings")
+}
+
+// ----------------------------------------------------
+// UNIFIED PRODUCT CATALOG (NO SEPARATE LISTING)
+// ----------------------------------------------------
+
+model Product {
+  id                   String        @id @default(uuid())
+  sellerId             String
+  seller               User          @relation("UserProducts", fields: [sellerId], references: [id], onDelete: Restrict)
+  title                String
+  slug                 String        @unique
+  description          String
+  sector               Sector        @default(AGRICULTURE)
+  category             String
+  variety              String?
+  pricePerUnit         Decimal       @db.Decimal(12, 2)
+  unit                 String
+  minimumOrderQuantity Decimal       @default(1) @db.Decimal(10, 2)
+  availableStock       Decimal       @db.Decimal(10, 2)
+  reservedStock        Decimal       @default(0) @db.Decimal(10, 2)
+  harvestDate          DateTime?
+  locationDistrict     String
+  locationState        String
+  status               ProductStatus @default(PENDING_MODERATION)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  images       ProductImage[]
+  reservations InventoryReservation[]
+  orderItems   OrderItem[]
+
+  @@index([slug])
+  @@index([sellerId])
+  @@index([sector])
+  @@index([category])
+  @@index([status])
+  @@index([locationState, locationDistrict])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([isPrimary])
+  @@map("product_images")
+}
+
+// ----------------------------------------------------
+// INVENTORY RESERVATION (15-MIN LOCKS)
+// ----------------------------------------------------
+
+model InventoryReservation {
+  id            String   @id @default(uuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  cartSessionId String
+  quantity      Decimal  @db.Decimal(10, 2)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([productId])
+  @@index([cartSessionId])
+  @@index([expiresAt])
+  @@map("inventory_reservations")
+}
+
+// ----------------------------------------------------
+// MULTI-VENDOR ORDER ARCHITECTURE
+// ----------------------------------------------------
+
+model OrderGroup {
+  id                      String           @id @default(uuid())
+  orderNumber             String           @unique
+  buyerId                 String
+  buyer                   User             @relation("BuyerOrderGroups", fields: [buyerId], references: [id], onDelete: Restrict)
+  totalAmount             Decimal          @db.Decimal(12, 2)
+  shippingAddressSnapshot Json
+  status                  OrderGroupStatus @default(PAYMENT_PENDING)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  sellerOrders Order[]
+  payments     Payment[]
+
+  @@index([buyerId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([createdAt])
+  @@map("order_groups")
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  subOrderNumber   String      @unique
+  orderGroupId     String
+  orderGroup       OrderGroup  @relation(fields: [orderGroupId], references: [id], onDelete: Restrict)
+  sellerId         String
+  seller           User        @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Restrict)
+  sellerTotal      Decimal     @db.Decimal(12, 2)
+  commissionAmount Decimal     @default(0) @db.Decimal(12, 2)
+  status           OrderStatus @default(PLACED)
+  trackingNumber   String?
+  shippingCourier  String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  items OrderItem[]
+
+  @@index([orderGroupId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                   String   @id @default(uuid())
+  orderId              String
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId            String
+  product              Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productTitleSnapshot String
+  unitSnapshot         String
+  quantity             Decimal  @db.Decimal(10, 2)
+  unitPrice            Decimal  @db.Decimal(12, 2)
+  totalPrice           Decimal  @db.Decimal(12, 2)
+  createdAt            DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ----------------------------------------------------
+// PAYMENT ARCHITECTURE
+// ----------------------------------------------------
+
+model Payment {
+  id              String        @id @default(uuid())
+  orderGroupId    String
+  orderGroup      OrderGroup    @relation(fields: [orderGroupId], references: [id], onDelete: Restrict)
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod @default(COD)
+  status          PaymentStatus @default(PENDING)
+  transactionRef  String?       @unique
+  gatewayResponse Json?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([orderGroupId])
+  @@index([status])
+  @@index([transactionRef])
+  @@map("payments")
+}
+
+// ----------------------------------------------------
+// NETWORK & BUSINESS CONNECTION
+// ----------------------------------------------------
+
+model NetworkProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String
+  headline          String?
+  bio               String?
+  websiteUrl        String?
+  isBusiness        Boolean  @default(false)
+  businessRegNumber String?
+  connectionCount   Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isBusiness])
+  @@map("network_profiles")
+}
+
+model ConnectionRequest {
+  id         String                  @id @default(uuid())
+  senderId   String
+  sender     User                    @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User                    @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     ConnectionRequestStatus @default(PENDING)
+  message    String?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("connection_requests")
+}
+
+model BusinessConnection {
+  id            String   @id @default(uuid())
+  userAId       String
+  userA         User     @relation("ConnectionsA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId       String
+  userB         User     @relation("ConnectionsB", fields: [userBId], references: [id], onDelete: Cascade)
+  establishedAt DateTime @default(now())
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+  @@map("business_connections")
+}
+
+// ----------------------------------------------------
+// CONTEXTUAL MESSAGING
+// ----------------------------------------------------
+
+model Conversation {
+  id        String   @id @default(uuid())
+  title     String?
+  isGroup   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String              @id @default(uuid())
+  conversationId  String
+  conversation    Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User                @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Restrict)
+  content         String
+  contextType     MessageContextType? @default(GENERAL)
+  contextId       String?
+  contextSnapshot Json?
+  isRead          Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ----------------------------------------------------
+// NOTIFICATIONS & PREFERENCES
+// ----------------------------------------------------
+
+model Notification {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         NotificationType
+  title        String
+  body         String
+  resourceType String?
+  resourceId   String?
+  metadata     Json?
+  isRead       Boolean          @default(false)
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   NotificationChannel
+  type      NotificationType
+  isEnabled Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([userId, channel, type])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+// ----------------------------------------------------
+// VERIFICATION ENGINE
+// ----------------------------------------------------
+
+model VerificationRequest {
+  id          String             @id @default(uuid())
+  userId      String
+  user        User               @relation("UserVerifications", fields: [userId], references: [id], onDelete: Cascade)
+  type        VerificationType
+  status      VerificationStatus @default(PENDING)
+  reviewerId  String?
+  reviewer    User?              @relation("ReviewerVerifications", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNotes String?
+  submittedAt DateTime           @default(now())
+  reviewedAt  DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  documents VerificationDocument[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([reviewerId])
+  @@index([type])
+  @@map("verification_requests")
+}
+
+model VerificationDocument {
+  id                    String              @id @default(uuid())
+  verificationRequestId String
+  verificationRequest   VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+  documentType          VerificationDocType
+  storageKey            String
+  originalFileName      String
+  mimeType              String
+  fileSizeBytes         Int
+  uploadedAt            DateTime            @default(now())
+
+  @@index([verificationRequestId])
+  @@index([documentType])
+  @@map("verification_documents")
+}
+
+// ----------------------------------------------------
+// IMMUTABLE AUDIT LOG
+// ----------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  resource    String
+  resourceId  String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([resource, resourceId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
