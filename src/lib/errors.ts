@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHORIZED"
@@ -42,7 +44,39 @@ export class AppError extends Error {
     return new AppError("CONFLICT", message, 409, details);
   }
 
+  static businessRule(message: string, details?: unknown) {
+    return new AppError("CONFLICT", message, 400, details);
+  }
+
   static internal(message: string = "Internal server error") {
     return new AppError("INTERNAL_ERROR", message, 500);
   }
+}
+
+export function handleError(error: unknown) {
+  if (error instanceof AppError) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+        },
+      },
+      { status: error.statusCode }
+    );
+  }
+
+  console.error("Unhandled server error:", error);
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "An unexpected internal server error occurred",
+      },
+    },
+    { status: 500 }
+  );
 }
