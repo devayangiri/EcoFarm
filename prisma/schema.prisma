@@ -189,6 +189,28 @@ enum RequirementStatus {
   CANCELLED
 }
 
+enum ReservationStatus {
+  ACTIVE
+  CONVERTED
+  RELEASED
+  EXPIRED
+}
+
+enum CartStatus {
+  ACTIVE
+  CHECKOUT
+  CONVERTED
+  ABANDONED
+}
+
+enum CheckoutSessionStatus {
+  ACTIVE
+  PAYMENT_PENDING
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
 // ----------------------------------------------------
 // USER & IDENTITY
 // ----------------------------------------------------
@@ -218,6 +240,9 @@ model User {
   products                   Product[]                 @relation("UserProducts")
   savedProducts              SavedProduct[]            @relation("BuyerSavedProducts")
   buyerRequirements          BuyerRequirement[]        @relation("BuyerRequirements")
+  carts                      Cart[]                    @relation("BuyerCarts")
+  sellerCartItems            CartItem[]                @relation("SellerCartItems")
+  checkoutSessions           CheckoutSession[]         @relation("BuyerCheckoutSessions")
   orderGroups                OrderGroup[]              @relation("BuyerOrderGroups")
   sellerOrders               Order[]                   @relation("SellerOrders")
   sentConnectionRequests     ConnectionRequest[]       @relation("SentRequests")
@@ -449,6 +474,7 @@ model Product {
   reservations InventoryReservation[]
   orderItems   OrderItem[]
   savedBy      SavedProduct[]         @relation("SavedProducts")
+  cartItems    CartItem[]
 
   @@index([slug])
   @@index([sellerId])
@@ -476,21 +502,93 @@ model ProductImage {
 }
 
 // ----------------------------------------------------
+// MULTI-VENDOR CART ARCHITECTURE
+// ----------------------------------------------------
+
+model Cart {
+  id        String     @id @default(uuid())
+  buyerId   String
+  buyer     User       @relation("BuyerCarts", fields: [buyerId], references: [id], onDelete: Cascade)
+  status    CartStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  items            CartItem[]
+  checkoutSessions CheckoutSession[]
+
+  @@index([buyerId])
+  @@index([status])
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  sellerId  String
+  seller    User     @relation("SellerCartItems", fields: [sellerId], references: [id], onDelete: Restrict)
+  quantity  Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+  @@index([sellerId])
+  @@map("cart_items")
+}
+
+// ----------------------------------------------------
+// CHECKOUT SESSION ARCHITECTURE
+// ----------------------------------------------------
+
+model CheckoutSession {
+  id                      String                @id @default(uuid())
+  buyerId                 String
+  buyer                   User                  @relation("BuyerCheckoutSessions", fields: [buyerId], references: [id], onDelete: Cascade)
+  cartId                  String
+  cart                    Cart                  @relation(fields: [cartId], references: [id], onDelete: Restrict)
+  status                  CheckoutSessionStatus @default(ACTIVE)
+  subtotal                Decimal               @db.Decimal(12, 2)
+  shippingAmount          Decimal               @default(0) @db.Decimal(12, 2)
+  taxAmount               Decimal               @default(0) @db.Decimal(12, 2)
+  discountAmount          Decimal               @default(0) @db.Decimal(12, 2)
+  totalAmount             Decimal               @db.Decimal(12, 2)
+  shippingAddressSnapshot Json?
+  paymentMethod           PaymentMethod         @default(COD)
+  orderGroupId            String?
+  expiresAt               DateTime
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([buyerId])
+  @@index([cartId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("checkout_sessions")
+}
+
+// ----------------------------------------------------
 // INVENTORY RESERVATION (15-MIN LOCKS)
 // ----------------------------------------------------
 
 model InventoryReservation {
-  id            String   @id @default(uuid())
+  id            String            @id @default(uuid())
   productId     String
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product       Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
   cartSessionId String
-  quantity      Decimal  @db.Decimal(10, 2)
+  quantity      Decimal           @db.Decimal(10, 2)
+  status        ReservationStatus @default(ACTIVE)
   expiresAt     DateTime
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  releasedAt    DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@index([productId])
   @@index([cartSessionId])
+  @@index([status])
   @@index([expiresAt])
   @@map("inventory_reservations")
 }
@@ -535,7 +633,8 @@ model Order {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  items OrderItem[]
+  items    OrderItem[]
+  timeline OrderTimeline[]
 
   @@index([orderGroupId])
   @@index([sellerId])
@@ -560,6 +659,20 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+model OrderTimeline {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  actorId   String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+  @@index([status])
+  @@map("order_timelines")
 }
 
 // ----------------------------------------------------

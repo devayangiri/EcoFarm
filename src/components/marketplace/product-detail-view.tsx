@@ -2,9 +2,11 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
 import { InquiryDialog } from "@/components/marketplace/inquiry-dialog";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -14,6 +16,10 @@ import {
   Bookmark,
   MessageSquare,
   ChevronLeft,
+  ShoppingCart,
+  Check,
+  Plus,
+  Minus,
 } from "lucide-react";
 
 export interface ProductDetailViewProps {
@@ -53,10 +59,15 @@ export interface ProductDetailViewProps {
   currentUserRole?: string | null;
 }
 
-export function ProductDetailView({ product }: ProductDetailViewProps) {
+export function ProductDetailView({ product, currentUserRole }: ProductDetailViewProps) {
+  const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(product.isSaved);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const [quantity, setQuantity] = useState(product.minimumOrderQuantity);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   const images = product.images.length > 0
     ? product.images
@@ -78,6 +89,43 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
       }
     } catch {
       setIsSaved(!nextSaved);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!currentUserRole) {
+      router.push(`/login?callbackUrl=/marketplace/${product.id}`);
+      return;
+    }
+
+    if (currentUserRole !== "BUYER") {
+      setCartError("Only registered commercial buyers can place wholesale orders");
+      return;
+    }
+
+    setIsAddingToCart(true);
+    setCartError(null);
+
+    try {
+      const res = await fetch("/api/cart/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          quantity,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to add to cart");
+      }
+
+      setCartSuccess(true);
+    } catch (err: any) {
+      setCartError(err.message || "An error occurred");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
@@ -104,7 +152,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
           </Button>
 
           <Button
-            variant="primary"
+            variant="outline"
             size="sm"
             onClick={() => setIsInquiryOpen(true)}
             leftIcon={<MessageSquare className="h-4 w-4" />}
@@ -113,6 +161,21 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
           </Button>
         </div>
       </div>
+
+      {cartError && (
+        <Alert variant="error" onDismiss={() => setCartError(null)}>
+          {cartError}
+        </Alert>
+      )}
+
+      {cartSuccess && (
+        <Alert variant="success" onDismiss={() => setCartSuccess(false)}>
+          Commodity lot added to your procurement cart.{" "}
+          <Link href="/cart" className="underline font-bold">
+            View Cart & Checkout
+          </Link>
+        </Alert>
+      )}
 
       {/* Main Product Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -248,15 +311,46 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               </div>
             </div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              onClick={() => setIsInquiryOpen(true)}
-              leftIcon={<MessageSquare className="h-4 w-4" />}
-            >
-              Inquire with Producer
-            </Button>
+            {/* Quantity Selector & Add to Cart */}
+            {product.availableStock > 0 && (
+              <div className="space-y-3 pt-2 border-t border-surface-dim">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-neutral">Order Quantity:</span>
+                  <div className="flex items-center border border-surface-dim rounded-md bg-surface-low">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(product.minimumOrderQuantity, q - 1))}
+                      disabled={quantity <= product.minimumOrderQuantity}
+                      className="p-1.5 text-slate-neutral hover:text-on-surface disabled:opacity-30"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="px-3 font-mono text-xs font-bold text-on-surface min-w-[40px] text-center">
+                      {quantity} {product.unit}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.min(product.availableStock, q + 1))}
+                      disabled={quantity >= product.availableStock}
+                      className="p-1.5 text-slate-neutral hover:text-on-surface disabled:opacity-30"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleAddToCart}
+                  isLoading={isAddingToCart}
+                  leftIcon={cartSuccess ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                >
+                  {cartSuccess ? "Added to Cart" : "Add Lot to Cart"}
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* Verified Producer Public Card */}
