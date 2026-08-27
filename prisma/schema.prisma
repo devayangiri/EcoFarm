@@ -168,6 +168,7 @@ enum NotificationType {
   VERIFICATION_UPDATE
   PRODUCT_MODERATION
   SERVICE_UPDATE
+  AGENT_UPDATE
 }
 
 enum NotificationChannel {
@@ -189,7 +190,40 @@ enum VerificationStatus {
   PENDING
   UNDER_REVIEW
   APPROVED
+  REQUEST_CHANGES
   REJECTED
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  CONVERTED
+  LOST
+}
+
+enum LeadActivityType {
+  CALL
+  MESSAGE
+  MEETING
+  NOTE
+  FOLLOW_UP
+  STATUS_CHANGE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 enum VerificationDocType {
@@ -401,7 +435,11 @@ model AgentProfile {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  assignments AgentAssignment[]
+  assignments    AgentAssignment[]
+  leads          AgentLead[]
+  leadActivities LeadActivity[]
+  tasks          AgentTask[]
+  notes          AgentNote[]
 
   @@index([userId])
   @@index([assignedRegionState])
@@ -426,6 +464,84 @@ model AgentAssignment {
   @@index([targetUserId])
   @@index([status])
   @@map("agent_assignments")
+}
+
+model AgentLead {
+  id             String       @id @default(uuid())
+  agentProfileId String
+  agentProfile   AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  contactName    String
+  contactPhone   String?
+  contactEmail   String?
+  source         String?
+  targetSector   Sector       @default(AGRICULTURE)
+  stage          LeadStage    @default(NEW)
+  estimatedValue Decimal?     @db.Decimal(12, 2)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  activities LeadActivity[]
+  tasks      AgentTask[]
+
+  @@index([agentProfileId])
+  @@index([stage])
+  @@index([targetSector])
+  @@map("agent_leads")
+}
+
+model LeadActivity {
+  id             String           @id @default(uuid())
+  leadId         String
+  lead           AgentLead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agentProfileId String
+  agentProfile   AgentProfile     @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  type           LeadActivityType
+  note           String
+  createdAt      DateTime         @default(now())
+
+  @@index([leadId])
+  @@index([agentProfileId])
+  @@map("lead_activities")
+}
+
+model AgentTask {
+  id                 String           @id @default(uuid())
+  agentProfileId     String
+  agentProfile       AgentProfile     @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  dueDate            DateTime
+  priority           TaskPriority     @default(MEDIUM)
+  status             TaskStatus       @default(TODO)
+  linkedLeadId       String?
+  linkedLead         AgentLead?       @relation(fields: [linkedLeadId], references: [id], onDelete: SetNull)
+  linkedTargetType   AgentTargetType?
+  linkedTargetUserId String?
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([agentProfileId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+  @@map("agent_tasks")
+}
+
+model AgentNote {
+  id             String          @id @default(uuid())
+  agentProfileId String
+  agentProfile   AgentProfile    @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  targetType     AgentTargetType
+  targetUserId   String
+  content        String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([agentProfileId])
+  @@index([targetType, targetUserId])
+  @@map("agent_notes")
 }
 
 // ----------------------------------------------------
