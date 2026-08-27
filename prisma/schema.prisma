@@ -991,16 +991,20 @@ model BusinessConnection {
 // ----------------------------------------------------
 
 model Conversation {
-  id        String   @id @default(uuid())
-  title     String?
-  isGroup   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String              @id @default(uuid())
+  title           String?
+  isGroup         Boolean             @default(false)
+  contextType     MessageContextType? @default(GENERAL)
+  contextId       String?
+  contextSnapshot Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   participants ConversationParticipant[]
   messages     Message[]
 
   @@index([updatedAt])
+  @@index([contextType, contextId])
   @@map("conversations")
 }
 
@@ -1030,12 +1034,32 @@ model Message {
   contextId       String?
   contextSnapshot Json?
   isRead          Boolean             @default(false)
+  isDeleted       Boolean             @default(false)
+  deletedAt       DateTime?
+  deletedById     String?
   createdAt       DateTime            @default(now())
 
+  attachments MessageAttachment[]
+
+  @@index([conversationId, createdAt])
   @@index([conversationId])
   @@index([senderId])
   @@index([createdAt])
   @@map("messages")
+}
+
+model MessageAttachment {
+  id               String   @id @default(uuid())
+  messageId        String
+  message          Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  storageKey       String
+  originalFileName String
+  mimeType         String
+  fileSizeBytes    Int
+  uploadedAt       DateTime @default(now())
+
+  @@index([messageId])
+  @@map("message_attachments")
 }
 
 // ----------------------------------------------------
