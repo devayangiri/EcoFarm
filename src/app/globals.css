@@ -12,10 +12,54 @@
     @apply border-surface-dim;
   }
   body {
-    @apply bg-surface text-on-surface font-body antialiased;
+    @apply bg-surface text-on-surface font-body antialiased selection:bg-brand-secondary/20 selection:text-brand-primary;
+    overflow-x: hidden;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight text-on-surface;
+  }
+}
+
+@layer utilities {
+  /* Stitch Typography Scale */
+  .font-display {
+    @apply font-heading text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-on-surface;
+  }
+  .font-h1 {
+    @apply font-heading text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-on-surface;
+  }
+  .font-h2 {
+    @apply font-heading text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-on-surface;
+  }
+  .font-h3 {
+    @apply font-heading text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-on-surface;
+  }
+  .font-h4 {
+    @apply font-heading text-base sm:text-lg font-semibold text-on-surface;
+  }
+  .font-body-lg {
+    @apply font-body text-base sm:text-lg leading-relaxed text-slate-neutral;
+  }
+  .font-body-md {
+    @apply font-body text-sm sm:text-base leading-normal text-slate-neutral;
+  }
+  .font-body-sm {
+    @apply font-body text-xs sm:text-sm leading-normal text-slate-neutral;
+  }
+  .font-label {
+    @apply font-heading text-xs font-bold uppercase tracking-wider text-slate-neutral;
+  }
+  .font-caption {
+    @apply font-body text-[11px] text-slate-neutral/80;
+  }
+  .font-data {
+    @apply font-mono text-xs sm:text-sm;
+  }
+
+  /* Stitch Mobile Target Size */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
@@ -36,4 +80,13 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #0891b2;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
 }
