@@ -1,21 +1,19 @@
 import React from "react";
+import { requireRole } from "@/lib/rbac";
 import { MarketplaceService } from "@/services/marketplace.service";
-import { MarketplaceShell } from "@/components/public/marketplace-shell";
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { MarketplaceBrowser } from "@/components/marketplace/marketplace-browser";
 import { MarketplaceSearchSchema } from "@/lib/validators/marketplace.schema";
-import { getCurrentUser } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
-interface MarketplacePageProps {
+interface BuyerAgriMarketplacePageProps {
   searchParams: {
     search?: string;
-    sector?: string;
     category?: string;
     minPrice?: string;
     maxPrice?: string;
-    minMoq?: string;
-    maxMoq?: string;
     district?: string;
     state?: string;
     inStockOnly?: string;
@@ -25,19 +23,17 @@ interface MarketplacePageProps {
   };
 }
 
-export default async function PublicMarketplacePage({
+export default async function BuyerAgriMarketplacePage({
   searchParams,
-}: MarketplacePageProps) {
-  const session = await getCurrentUser();
+}: BuyerAgriMarketplacePageProps) {
+  const user = await requireRole("BUYER");
 
   const query = {
     search: searchParams.search,
-    sector: searchParams.sector || "ALL",
+    sector: "AGRICULTURE",
     category: searchParams.category,
     minPrice: searchParams.minPrice,
     maxPrice: searchParams.maxPrice,
-    minMoq: searchParams.minMoq,
-    maxMoq: searchParams.maxMoq,
     district: searchParams.district,
     state: searchParams.state,
     inStockOnly: searchParams.inStockOnly,
@@ -48,30 +44,31 @@ export default async function PublicMarketplacePage({
 
   const validated = MarketplaceSearchSchema.parse(query);
   const [result, facets] = await Promise.all([
-    MarketplaceService.searchProducts(validated, session?.userId),
+    MarketplaceService.searchProducts(validated, user.userId),
     MarketplaceService.getMarketplaceFacets(),
   ]);
 
   return (
-    <MarketplaceShell>
-      <div className="py-6 max-w-stitch-container mx-auto space-y-6">
-        <div className="space-y-1 text-left">
-          <h1 className="font-heading text-2xl font-extrabold text-on-surface">
-            B2B Dual Commodity Marketplace
-          </h1>
-          <p className="text-xs text-slate-neutral">
-            Direct wholesale trade for agricultural crops, grain harvests, live fish, and aquaculture fingerlings.
-          </p>
-        </div>
+    <AppShell showSidebar userRole="BUYER" userName={user.fullName} currentPath="/buyer/marketplace">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-stitch-container mx-auto space-y-6 font-body">
+        <PageHeader
+          title="Agriculture Produce Marketplace"
+          description="Explore high-yield grains, pulses, oilseeds, fresh vegetables, and agro-inputs directly from verified farms."
+          breadcrumbs={[
+            { label: "Buyer Portal", href: "/buyer" },
+            { label: "Marketplace", href: "/buyer/marketplace" },
+            { label: "Agriculture", current: true },
+          ]}
+        />
 
         <MarketplaceBrowser
           initialProducts={result.items as any}
           pagination={result.pagination}
-          currentSector={(validated.sector as any) || "ALL"}
+          currentSector="AGRICULTURE"
           facets={facets}
-          isBuyerPortal={false}
+          isBuyerPortal={true}
         />
       </div>
-    </MarketplaceShell>
+    </AppShell>
   );
 }

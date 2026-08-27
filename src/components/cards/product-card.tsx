@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { MapPin, ShieldCheck, ShoppingCart, Sprout, Fish } from "lucide-react";
+import { MapPin, ShieldCheck, MessageSquare, Sprout, Waves, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ export interface ProductCardProps {
   locationDistrict: string;
   locationState: string;
   imageUrl?: string | null;
+  isSaved?: boolean;
+  onToggleSave?: (productId: string) => void;
   onAddToCart?: (productId: string) => void;
 }
 
@@ -41,6 +43,8 @@ export function ProductCard({
   locationDistrict,
   locationState,
   imageUrl,
+  isSaved = false,
+  onToggleSave,
   onAddToCart,
 }: ProductCardProps) {
   const isOutOfStock = availableStock <= 0;
@@ -60,12 +64,12 @@ export function ProductCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-surface-container text-slate-neutral/40">
-              {sector === "AGRICULTURE" ? <Sprout className="h-10 w-10" /> : <Fish className="h-10 w-10" />}
+              {sector === "AGRICULTURE" ? <Sprout className="h-10 w-10" /> : <Waves className="h-10 w-10" />}
             </div>
           )}
 
-          {/* Top Badges */}
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+          {/* Top Badges & Save Button */}
+          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
             <Badge variant={sector === "AGRICULTURE" ? "primary" : "secondary"} size="sm">
               {sector === "AGRICULTURE" ? (
                 <>
@@ -74,11 +78,30 @@ export function ProductCard({
                 </>
               ) : (
                 <>
-                  <Fish className="h-3 w-3" />
+                  <Waves className="h-3 w-3" />
                   <span>Aqua</span>
                 </>
               )}
             </Badge>
+
+            {onToggleSave && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleSave(id);
+                }}
+                className={`pointer-events-auto p-1.5 rounded-full backdrop-blur-md transition-all ${
+                  isSaved
+                    ? "bg-brand-primary text-white shadow-sm"
+                    : "bg-white/80 text-slate-neutral hover:bg-white hover:text-on-surface"
+                }`}
+                aria-label={isSaved ? "Unsave product" : "Save product"}
+              >
+                <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
+              </button>
+            )}
           </div>
 
           {isOutOfStock && (
@@ -94,7 +117,7 @@ export function ProductCard({
             <span className="text-[11px] font-heading font-semibold uppercase tracking-wider text-brand-secondary">
               {category}
             </span>
-            <Link href={`/marketplace/${slug}`} className="block">
+            <Link href={`/marketplace/${id}`} className="block">
               <h3 className="font-heading text-sm font-bold text-on-surface line-clamp-1 group-hover:text-brand-primary transition-colors">
                 {title}
               </h3>
@@ -135,16 +158,15 @@ export function ProductCard({
           </div>
         </div>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={isOutOfStock}
-          onClick={() => onAddToCart?.(id)}
-          leftIcon={<ShoppingCart className="h-3.5 w-3.5" />}
-          className="gap-1.5"
-        >
-          Buy / Inquire
-        </Button>
+        <Link href={`/marketplace/${id}`}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1.5"
+          >
+            View Details
+          </Button>
+        </Link>
       </div>
     </Card>
   );
