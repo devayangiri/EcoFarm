@@ -119,9 +119,11 @@ export function Header({
           </div>
 
           <div className="sm:hidden">
-            <Button size="sm" variant="primary">
-              Sign In
-            </Button>
+            <Link href="/login">
+              <Button size="sm" variant="primary" className="min-h-[44px]">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

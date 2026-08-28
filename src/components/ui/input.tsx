@@ -21,7 +21,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           disabled={disabled}
           className={cn(
-            "w-full h-10 rounded border bg-white px-3 text-sm text-on-surface font-body placeholder:text-slate-neutral/50 transition-all focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary disabled:bg-surface-low disabled:text-slate-neutral/50 disabled:cursor-not-allowed",
+            "w-full h-11 sm:h-10 rounded border bg-white px-3 text-base sm:text-sm text-on-surface font-body placeholder:text-slate-neutral/50 transition-all focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary disabled:bg-surface-low disabled:text-slate-neutral/50 disabled:cursor-not-allowed",
             leftIcon && "pl-9",
             rightIcon && "pr-9",
             isError ? "border-status-error focus:ring-status-error" : "border-surface-dim",

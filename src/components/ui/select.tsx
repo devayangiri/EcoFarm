@@ -23,7 +23,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           disabled={disabled}
           className={cn(
-            "w-full h-10 appearance-none rounded border bg-white pl-3 pr-9 text-sm text-on-surface font-body transition-all focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary disabled:bg-surface-low disabled:cursor-not-allowed",
+            "w-full h-11 sm:h-10 appearance-none rounded border bg-white pl-3 pr-9 text-base sm:text-sm text-on-surface font-body transition-all focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary disabled:bg-surface-low disabled:cursor-not-allowed",
             isError ? "border-status-error focus:ring-status-error" : "border-surface-dim",
             className
           )}

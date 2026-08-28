@@ -56,10 +56,22 @@
     @apply font-mono text-xs sm:text-sm;
   }
 
-  /* Stitch Mobile Target Size */
+  /* Stitch Mobile Target Size & Safe Area */
   .touch-target {
     min-height: 44px;
     min-width: 44px;
+  }
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .safe-area-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+  .min-h-screen-dvh {
+    min-height: 100dvh;
+  }
+  .h-screen-dvh {
+    height: 100dvh;
   }
 }
 

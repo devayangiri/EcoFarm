@@ -173,7 +173,7 @@ export function MessagingView({
   };
 
   return (
-    <div className="h-[calc(100vh-120px)] min-h-[500px] border border-surface-dim rounded-xl bg-white shadow-sm overflow-hidden flex font-body">
+    <div className="h-[calc(100dvh-140px)] sm:h-[calc(100vh-120px)] min-h-[450px] border border-surface-dim rounded-xl bg-white shadow-sm overflow-hidden flex font-body">
       {/* Pane 1: Conversation List (Desktop 320px, Mobile toggle) */}
       <div className={`w-full lg:w-80 shrink-0 ${activeId ? "hidden lg:block" : "block"}`}>
         <ConversationList

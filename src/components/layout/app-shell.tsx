@@ -20,7 +20,7 @@ export function AppShell({
   currentPath = "/",
 }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-surface flex flex-col font-body text-on-surface">
+    <div className="min-h-[100dvh] bg-surface flex flex-col font-body text-on-surface">
       {/* Desktop Header */}
       <Header userRole={userRole} userName={userName} />
 
@@ -32,14 +32,14 @@ export function AppShell({
         {/* Desktop Sidebar (Optional based on view) */}
         {showSidebar && <Sidebar userRole={userRole} currentPath={currentPath} />}
 
-        {/* Content Viewport */}
-        <main className="flex-1 w-full pb-20 md:pb-8">
+        {/* Content Viewport with mobile bottom navigation offset */}
+        <main className="flex-1 w-full pb-24 md:pb-8">
           {children}
         </main>
       </div>
 
-      {/* Android Mobile Bottom Navigation */}
-      <MobileBottomNav currentPath={currentPath} />
+      {/* Android/iOS Mobile Bottom Navigation */}
+      <MobileBottomNav currentPath={currentPath} userRole={userRole} />
     </div>
   );
 }

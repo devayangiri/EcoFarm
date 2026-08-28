@@ -404,6 +404,40 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
         productTitle={product.title}
         sellerName={product.seller.fullName}
       />
+
+      {/* Mobile Sticky Procurement Bar (Visible only on mobile below lg) */}
+      {product.availableStock > 0 && (
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t border-surface-dim p-3 px-4 flex items-center justify-between gap-3 shadow-stitch-modal pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-slate-neutral block">Unit Price</span>
+            <span className="font-heading font-bold text-base text-brand-primary">
+              {formatCurrency(product.pricePerUnit)}
+              <span className="text-xs font-normal text-slate-neutral">/{product.unit}</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsInquiryOpen(true)}
+              className="min-h-[44px] px-3 text-xs"
+              aria-label="Send Inquiry"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAddToCart}
+              isLoading={isAddingToCart}
+              className="min-h-[44px] px-4 text-xs font-bold"
+            >
+              {cartSuccess ? "Added ✓" : "Add to Cart"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

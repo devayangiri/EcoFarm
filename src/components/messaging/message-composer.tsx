@@ -119,7 +119,7 @@ export function MessageComposer({ onSendMessage, disabled }: MessageComposerProp
   };
 
   return (
-    <div className="border-t border-surface-dim bg-white p-3 space-y-2 font-body text-left">
+    <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white border-t border-surface-dim space-y-2 shrink-0">
       {errorMessage && (
         <Alert variant="error" onDismiss={() => setErrorMessage(null)}>
           {errorMessage}
@@ -143,7 +143,7 @@ export function MessageComposer({ onSendMessage, disabled }: MessageComposerProp
               <button
                 type="button"
                 onClick={() => handleRemoveAttachment(idx)}
-                className="text-slate-neutral hover:text-status-error ml-1"
+                className="flex items-center justify-center min-h-[30px] min-w-[30px] text-slate-neutral hover:text-status-error ml-1"
                 aria-label="Remove attachment"
               >
                 <X className="h-3.5 w-3.5" />
@@ -169,7 +169,7 @@ export function MessageComposer({ onSendMessage, disabled }: MessageComposerProp
           size="sm"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || isUploading || isSending}
-          className="h-10 px-3 shrink-0"
+          className="min-h-[44px] min-w-[44px] p-0 flex items-center justify-center shrink-0"
           aria-label="Add attachments"
         >
           <Paperclip className="h-4 w-4 text-slate-neutral" />
@@ -183,7 +183,7 @@ export function MessageComposer({ onSendMessage, disabled }: MessageComposerProp
             onKeyDown={handleKeyDown}
             placeholder="Type a message (Enter to send, Shift+Enter for new line)..."
             disabled={disabled || isSending}
-            className="w-full resize-none rounded-lg border border-surface-dim bg-surface-low px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary focus:bg-white text-on-surface"
+            className="w-full resize-none rounded-lg border border-surface-dim bg-surface-low px-3 py-2 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary focus:bg-white text-on-surface"
           />
           <span className="absolute right-2 bottom-2 text-[10px] text-slate-neutral pointer-events-none">
             {content.length}/2000
@@ -196,7 +196,7 @@ export function MessageComposer({ onSendMessage, disabled }: MessageComposerProp
           size="sm"
           disabled={disabled || isSending || (!content.trim() && attachments.length === 0)}
           isLoading={isSending}
-          className="h-10 px-4 shrink-0"
+          className="min-h-[44px] min-w-[44px] px-3 shrink-0"
           aria-label="Send message"
         >
           <Send className="h-4 w-4" />

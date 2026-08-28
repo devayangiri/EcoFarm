@@ -183,14 +183,14 @@ export function LeadPipelineBoard({ leads }: LeadPipelineBoardProps) {
 
       {/* Mobile Stage Tabs Layout */}
       <div className="lg:hidden space-y-4">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           {STAGES.map((stg) => (
             <Button
               key={stg}
               variant={activeTab === stg ? "primary" : "outline"}
               size="sm"
               onClick={() => setActiveTab(stg)}
-              className="text-xs whitespace-nowrap"
+              className="text-xs whitespace-nowrap min-h-[44px] px-3.5"
             >
               {stg} ({leads.filter((l) => l.stage === stg).length})
             </Button>
@@ -198,20 +198,50 @@ export function LeadPipelineBoard({ leads }: LeadPipelineBoardProps) {
         </div>
 
         <div className="space-y-3">
-          {leads
-            .filter((l) => l.stage === activeTab)
-            .map((l) => (
-              <Card key={l.id} className="p-4 bg-white border border-surface-dim shadow-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <strong className="font-heading font-bold text-sm text-on-surface">{l.contactName}</strong>
-                  <Badge variant="primary" size="sm">{l.targetSector}</Badge>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-slate-neutral">
-                  {l.contactPhone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{l.contactPhone}</span>}
-                  {l.estimatedValue && <span className="font-mono font-bold text-brand-primary">{formatCurrency(l.estimatedValue)}</span>}
-                </div>
-              </Card>
-            ))}
+          {leads.filter((l) => l.stage === activeTab).length === 0 ? (
+            <div className="p-8 text-center bg-surface-low rounded-lg border border-surface-dim text-xs text-slate-neutral">
+              No leads in <span className="font-bold">{activeTab}</span> stage.
+            </div>
+          ) : (
+            leads
+              .filter((l) => l.stage === activeTab)
+              .map((l) => (
+                <Card key={l.id} className="p-4 bg-white border border-surface-dim shadow-sm space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <strong className="font-heading font-bold text-sm text-on-surface">{l.contactName}</strong>
+                    <Badge variant="primary" size="sm">{l.targetSector}</Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-neutral">
+                    {l.contactPhone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5 text-slate-neutral" />
+                        {l.contactPhone}
+                      </span>
+                    )}
+                    {l.estimatedValue && (
+                      <span className="font-mono font-bold text-brand-primary">
+                        {formatCurrency(l.estimatedValue)}
+                      </span>
+                    )}
+                  </div>
+                  {activeTab !== "CONVERTED" && activeTab !== "LOST" && (
+                    <div className="pt-2 border-t border-surface-dim flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-[44px] px-4 text-xs text-brand-primary border-brand-primary/30"
+                        onClick={() => {
+                          const nextIdx = STAGES.indexOf(activeTab as any) + 1;
+                          if (nextIdx < STAGES.length) handleStageTransition(l.id, STAGES[nextIdx]);
+                        }}
+                      >
+                        Advance to {STAGES[STAGES.indexOf(activeTab as any) + 1]} →
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              ))
+          )}
         </div>
       </div>
 
