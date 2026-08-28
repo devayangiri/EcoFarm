@@ -1,0 +1,17 @@
+{
+  "stage": "Stage 3 (10,000 VUs)",
+  "concurrentUsers": 10000,
+  "totalRequests": 50000,
+  "successfulRequests": 49760,
+  "failedRequests": 240,
+  "errorRatePercent": 0.48,
+  "rps": 1620,
+  "p50Ms": 65,
+  "p95Ms": 380,
+  "p99Ms": 740,
+  "durationSeconds": 30.86,
+  "memoryMb": 215,
+  "dbActiveConnections": 15,
+  "sseActiveConnections": 1000,
+  "status": "DEGRADED"
+}

@@ -1,0 +1,17 @@
+{
+  "stage": "Stage 1 (1,000 VUs)",
+  "concurrentUsers": 1000,
+  "totalRequests": 5000,
+  "successfulRequests": 5000,
+  "failedRequests": 0,
+  "errorRatePercent": 0,
+  "rps": 1240,
+  "p50Ms": 14,
+  "p95Ms": 48,
+  "p99Ms": 112,
+  "durationSeconds": 4.03,
+  "memoryMb": 88,
+  "dbActiveConnections": 10,
+  "sseActiveConnections": 100,
+  "status": "STABLE"
+}
