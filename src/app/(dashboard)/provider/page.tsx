@@ -13,7 +13,17 @@ export default async function ProviderDashboardPage() {
     redirect("/login?callbackUrl=/provider");
   }
 
-  const data = await ServiceService.getProviderDashboard(session.userId);
+  let data = {
+    metrics: { activeServices: 0, totalRequests: 0, pendingQuotations: 0, acceptedOrders: 0 },
+    services: [],
+    recentRequests: [],
+  };
+
+  try {
+    data = await ServiceService.getProviderDashboard(session.userId) as any;
+  } catch (err) {
+    console.warn("Provider dashboard database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <AppShell userRole={session.role} userName={session.fullName}>

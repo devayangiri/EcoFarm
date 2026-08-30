@@ -13,10 +13,19 @@ export default async function NotificationsPage() {
     redirect("/login?callbackUrl=/notifications");
   }
 
-  const [notificationResult, unreadCount] = await Promise.all([
-    NotificationService.getNotifications(session.userId, { pageSize: 20 }),
-    NotificationService.getUnreadCount(session.userId),
-  ]);
+  let notificationResult = { items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } };
+  let unreadCount = 0;
+
+  try {
+    const [fetchedResult, fetchedCount] = await Promise.all([
+      NotificationService.getNotifications(session.userId, { pageSize: 20 }),
+      NotificationService.getUnreadCount(session.userId),
+    ]);
+    notificationResult = fetchedResult as any;
+    unreadCount = fetchedCount;
+  } catch (err) {
+    console.warn("Notifications database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <AppShell userRole={session.role} userName={session.fullName}>

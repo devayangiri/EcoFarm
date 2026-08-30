@@ -19,7 +19,12 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
     redirect("/login?callbackUrl=/messages");
   }
 
-  const conversations = await MessagingService.getConversations(session.userId);
+  let conversations: any[] = [];
+  try {
+    conversations = await MessagingService.getConversations(session.userId) as any;
+  } catch (err) {
+    console.warn("Messages database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <AppShell userRole={session.role} userName={session.fullName}>

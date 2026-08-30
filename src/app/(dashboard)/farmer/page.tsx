@@ -29,17 +29,33 @@ export const dynamic = "force-dynamic";
 export default async function FarmerDashboardPage() {
   const user = await requireRole("FARMER");
 
-  const [stats, farms, recentProductsResult] = await Promise.all([
-    ProductService.getFarmerProductStats(user.userId),
-    FarmService.getFarmerFarms(user.userId),
-    ProductService.getFarmerProducts(user.userId, {
-      page: 1,
-      limit: 4,
-      sortBy: "newest",
-    }),
-  ]);
+  let stats = {
+    totalProducts: 0,
+    activeProducts: 0,
+    pendingModeration: 0,
+    outOfStock: 0,
+    draftProducts: 0,
+    pausedProducts: 0,
+  };
+  let farms: any[] = [];
+  let recentProducts: any[] = [];
 
-  const recentProducts = recentProductsResult.items;
+  try {
+    const [fetchedStats, fetchedFarms, fetchedProducts] = await Promise.all([
+      ProductService.getFarmerProductStats(user.userId),
+      FarmService.getFarmerFarms(user.userId),
+      ProductService.getFarmerProducts(user.userId, {
+        page: 1,
+        limit: 4,
+        sortBy: "newest",
+      }),
+    ]);
+    stats = fetchedStats;
+    farms = fetchedFarms;
+    recentProducts = fetchedProducts.items;
+  } catch (err) {
+    console.warn("Farmer dashboard database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <AppShell showSidebar userRole="FARMER" userName={user.fullName} currentPath="/farmer">

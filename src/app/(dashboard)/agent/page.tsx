@@ -12,7 +12,17 @@ export default async function AgentDashboardPage() {
   if (!session) redirect("/login?callbackUrl=/agent");
   if (session.role !== "AGENT" && session.role !== "ADMIN") redirect("/");
 
-  const data = await AgentService.getAgentDashboard(session.userId);
+  let data = {
+    metrics: { assignedFarms: 0, pendingVerifications: 0, activeLeads: 0, totalCommission: 0 },
+    assignments: [],
+    recentTasks: [],
+  };
+
+  try {
+    data = await AgentService.getAgentDashboard(session.userId) as any;
+  } catch (err) {
+    console.warn("Agent dashboard database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <AppShell userRole={session.role} userName={session.fullName}>

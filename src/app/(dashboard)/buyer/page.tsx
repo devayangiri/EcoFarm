@@ -30,7 +30,17 @@ export const dynamic = "force-dynamic";
 
 export default async function BuyerDashboardPage() {
   const user = await requireRole("BUYER");
-  const dashboardData = await BuyerService.getBuyerDashboard(user.userId);
+  let dashboardData = {
+    metrics: { savedProducts: 0, activeRequirements: 0, productInquiries: 0, connectedSuppliers: 0 },
+    recentRequirements: [] as any[],
+    recommendedProducts: [] as any[],
+  };
+
+  try {
+    dashboardData = await BuyerService.getBuyerDashboard(user.userId) as any;
+  } catch (err) {
+    console.warn("Buyer dashboard database query fallback:", err instanceof Error ? err.message : err);
+  }
   const { metrics, recentRequirements, recommendedProducts } = dashboardData;
 
   return (
