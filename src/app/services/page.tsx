@@ -42,7 +42,17 @@ export default async function ServicesDirectoryPage({
   };
 
   const validated = ServiceDirectorySearchSchema.parse(query);
-  const result = await ServiceService.searchServices(validated);
+  let result = {
+    items: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+  };
+
+  try {
+    const fetchedResult = await ServiceService.searchServices(validated);
+    result = fetchedResult as any;
+  } catch (err) {
+    console.warn("Services database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <MarketplaceShell>

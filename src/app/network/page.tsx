@@ -41,7 +41,17 @@ export default async function NetworkDirectoryPage({
   };
 
   const validated = NetworkDirectorySearchSchema.parse(query);
-  const result = await NetworkService.searchDirectory(validated, session?.userId);
+  let result = {
+    items: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+  };
+
+  try {
+    const fetchedResult = await NetworkService.searchDirectory(validated, session?.userId);
+    result = fetchedResult as any;
+  } catch (err) {
+    console.warn("Network database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <MarketplaceShell>

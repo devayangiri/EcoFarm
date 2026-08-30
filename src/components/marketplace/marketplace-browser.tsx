@@ -319,7 +319,7 @@ export function MarketplaceBrowser({
               onChange={(e) => updateQueryParams({ category: e.target.value || undefined })}
               options={[
                 { value: "", label: "All Commodity Categories" },
-                ...(facets?.categories.map((c) => ({
+                ...(facets?.categories?.map((c) => ({
                   value: c.category,
                   label: `${c.category} (${c.sector === "AGRICULTURE" ? "Agri" : "Aqua"})`,
                 })) || []),
@@ -356,7 +356,7 @@ export function MarketplaceBrowser({
               onChange={(e) => updateQueryParams({ state: e.target.value || undefined })}
               options={[
                 { value: "", label: "All States" },
-                ...(facets?.states.map((s) => ({ value: s, label: s })) || [
+                ...(facets?.states?.map((s) => ({ value: s, label: s })) || [
                   { value: "West Bengal", label: "West Bengal" },
                   { value: "Odisha", label: "Odisha" },
                   { value: "Bihar", label: "Bihar" },

@@ -47,10 +47,25 @@ export default async function PublicMarketplacePage({
   };
 
   const validated = MarketplaceSearchSchema.parse(query);
-  const [result, facets] = await Promise.all([
-    MarketplaceService.searchProducts(validated, session?.userId),
-    MarketplaceService.getMarketplaceFacets(),
-  ]);
+  let result = {
+    items: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+  };
+  let facets = {
+    categories: [] as { category: string; sector: string }[],
+    states: [] as string[],
+  };
+
+  try {
+    const [fetchedResult, fetchedFacets] = await Promise.all([
+      MarketplaceService.searchProducts(validated, session?.userId),
+      MarketplaceService.getMarketplaceFacets(),
+    ]);
+    result = fetchedResult as any;
+    facets = fetchedFacets as any;
+  } catch (err) {
+    console.warn("Marketplace database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <MarketplaceShell>
