@@ -25,6 +25,6 @@ describe("AppShell Component", () => {
     expect(screen.getAllByText("Services").length).toBeGreaterThan(0);
 
     // Verify User Role presentation
-    expect(screen.getByText("farmer")).toBeInTheDocument();
+    expect(screen.getAllByText(/farmer/i).length).toBeGreaterThan(0);
   });
 });

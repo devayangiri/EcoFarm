@@ -4,6 +4,7 @@ import { MarketplaceShell } from "@/components/public/marketplace-shell";
 import { MarketplaceBrowser } from "@/components/marketplace/marketplace-browser";
 import { MarketplaceSearchSchema } from "@/lib/validators/marketplace.schema";
 import { getCurrentUser } from "@/lib/rbac";
+import { AppShell } from "@/components/layout/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -68,8 +69,12 @@ export default async function PublicMarketplacePage({
   }
 
   return (
-    <MarketplaceShell>
-      <div className="py-6 max-w-stitch-container mx-auto space-y-6">
+    <AppShell
+      currentPath="/marketplace"
+      userRole={session?.role || "Guest"}
+      userName={session?.fullName || "Welcome"}
+    >
+      <div className="py-6 max-w-stitch-container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="space-y-1 text-left">
           <h1 className="font-heading text-2xl font-extrabold text-on-surface">
             B2B Dual Commodity Marketplace
@@ -79,14 +84,16 @@ export default async function PublicMarketplacePage({
           </p>
         </div>
 
-        <MarketplaceBrowser
-          initialProducts={result.items as any}
-          pagination={result.pagination}
-          currentSector={(validated.sector as any) || "ALL"}
-          facets={facets}
-          isBuyerPortal={false}
-        />
+        <MarketplaceShell>
+          <MarketplaceBrowser
+            initialProducts={result.items as any}
+            pagination={result.pagination}
+            currentSector={(validated.sector as any) || "ALL"}
+            facets={facets}
+            isBuyerPortal={false}
+          />
+        </MarketplaceShell>
       </div>
-    </MarketplaceShell>
+    </AppShell>
   );
 }

@@ -17,8 +17,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { LandingHero } from "@/components/public/landing-hero";
 import { ProductCard } from "@/components/cards/product-card";
 import { SectionHeader } from "@/components/dashboard/section-header";
+import { getCurrentUser } from "@/lib/rbac";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getCurrentUser();
   const featuredProducts = [
     {
       id: "feat-1",
@@ -87,7 +89,7 @@ export default function HomePage() {
       badge: "Ecosystem",
       color: "text-brand-secondary",
       bg: "bg-brand-secondary/10",
-      href: "/register",
+      href: "/network",
     },
     {
       title: "Agri & Aqua Services",
@@ -96,12 +98,16 @@ export default function HomePage() {
       badge: "Operations",
       color: "text-brand-primary",
       bg: "bg-brand-primary/10",
-      href: "/marketplace",
+      href: "/services",
     },
   ];
 
   return (
-    <AppShell currentPath="/">
+    <AppShell
+      currentPath="/"
+      userRole={session?.role || "Guest"}
+      userName={session?.fullName || "Welcome"}
+    >
       {/* Stitch Landing Hero */}
       <LandingHero />
 

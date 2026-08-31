@@ -15,8 +15,8 @@ export interface AppShellProps {
 export function AppShell({
   children,
   showSidebar = false,
-  userRole = "FARMER",
-  userName = "Member",
+  userRole = "Guest",
+  userName = "Welcome",
   currentPath = "/",
 }: AppShellProps) {
   return (
@@ -25,7 +25,7 @@ export function AppShell({
       <Header userRole={userRole} userName={userName} />
 
       {/* Mobile Top Header */}
-      <MobileHeader />
+      <MobileHeader userRole={userRole} />
 
       {/* Main App Body */}
       <div className="flex-1 flex w-full">

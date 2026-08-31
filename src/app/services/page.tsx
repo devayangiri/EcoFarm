@@ -1,8 +1,9 @@
 import React from "react";
 import { ServiceService } from "@/services/service.service";
-import { MarketplaceShell } from "@/components/public/marketplace-shell";
 import { ServiceDirectoryBrowser } from "@/components/services/service-directory-browser";
 import { ServiceDirectorySearchSchema } from "@/lib/validators/service.schema";
+import { getCurrentUser } from "@/lib/rbac";
+import { AppShell } from "@/components/layout/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ interface ServicesDirectoryPageProps {
 export default async function ServicesDirectoryPage({
   searchParams,
 }: ServicesDirectoryPageProps) {
+  const session = await getCurrentUser();
+
   const query = {
     search: searchParams.search,
     category: (searchParams.category as any) || "ALL",
@@ -55,8 +58,12 @@ export default async function ServicesDirectoryPage({
   }
 
   return (
-    <MarketplaceShell>
-      <div className="py-6 max-w-stitch-container mx-auto space-y-6 text-left font-body">
+    <AppShell
+      currentPath="/services"
+      userRole={session?.role || "Guest"}
+      userName={session?.fullName || "Welcome"}
+    >
+      <div className="py-6 max-w-stitch-container mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-left font-body">
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-extrabold text-on-surface">
             Agricultural & Aquaculture Services Ecosystem
@@ -71,6 +78,6 @@ export default async function ServicesDirectoryPage({
           pagination={result.pagination}
         />
       </div>
-    </MarketplaceShell>
+    </AppShell>
   );
 }

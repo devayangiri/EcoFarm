@@ -74,57 +74,81 @@ export function Header({
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-3">
-          {/* Notification Icon */}
-          <Link
-            href="/notifications"
-            className="relative p-2 rounded text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadNotifications > 0 && (
-              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-status-error"></span>
-              </span>
-            )}
-          </Link>
+          {userRole && userRole !== "Guest" && userRole !== "GUEST" ? (
+            <>
+              {/* Notification Icon */}
+              <Link
+                href="/notifications"
+                className="relative p-2 rounded text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-status-error"></span>
+                  </span>
+                )}
+              </Link>
 
-          {/* Message Icon */}
-          <Link
-            href="/messages"
-            className="relative p-2 rounded text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
-            aria-label="Messages"
-          >
-            <MessageSquare className="h-5 w-5" />
-            {unreadMessages > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-secondary text-[10px] font-bold text-white">
-                {unreadMessages}
-              </span>
-            )}
-          </Link>
+              {/* Message Icon */}
+              <Link
+                href="/messages"
+                className="relative p-2 rounded text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
+                aria-label="Messages"
+              >
+                <MessageSquare className="h-5 w-5" />
+                {unreadMessages > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-secondary text-[10px] font-bold text-white">
+                    {unreadMessages}
+                  </span>
+                )}
+              </Link>
 
-          {/* User Profile / Status */}
-          <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-surface-dim">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container text-brand-primary font-heading font-semibold text-xs border border-surface-dim">
-              {userName.charAt(0).toUpperCase()}
+              {/* User Profile / Status */}
+              <Link
+                href={
+                  userRole === "FARMER"
+                    ? "/farmer"
+                    : userRole === "BUYER"
+                    ? "/buyer"
+                    : userRole === "AGENT"
+                    ? "/agent"
+                    : userRole === "SERVICE_PROVIDER"
+                    ? "/provider"
+                    : userRole === "ADMIN"
+                    ? "/admin"
+                    : "/"
+                }
+                className="hidden sm:flex items-center gap-2 pl-2 border-l border-surface-dim hover:opacity-80 transition-opacity"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container text-brand-primary font-heading font-semibold text-xs border border-surface-dim">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-semibold font-body text-on-surface leading-tight">
+                    {userName}
+                  </span>
+                  <span className="text-[10px] font-medium text-slate-neutral capitalize">
+                    {userRole.toLowerCase()}
+                  </span>
+                </div>
+              </Link>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button size="sm" variant="ghost" className="text-slate-neutral hover:text-brand-primary">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button size="sm" variant="primary">
+                  Join Network
+                </Button>
+              </Link>
             </div>
-            <div className="flex flex-col text-left">
-              <span className="text-xs font-semibold font-body text-on-surface leading-tight">
-                {userName}
-              </span>
-              <span className="text-[10px] font-medium text-slate-neutral capitalize">
-                {userRole.toLowerCase()}
-              </span>
-            </div>
-          </div>
-
-          <div className="sm:hidden">
-            <Link href="/login">
-              <Button size="sm" variant="primary" className="min-h-[44px]">
-                Sign In
-              </Button>
-            </Link>
-          </div>
+          )}
         </div>
       </div>
     </header>
