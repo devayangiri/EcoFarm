@@ -46,17 +46,34 @@ export default async function FarmerProductsPage({
   const user = await requireRole("FARMER");
   const currentPage = Number(searchParams.page) || 1;
 
-  const result = await ProductService.getFarmerProducts(user.userId, {
-    search: searchParams.search,
-    status: searchParams.status as any,
-    sector: searchParams.sector as any,
+  let products: any[] = [];
+  let pagination = {
     page: currentPage,
     limit: 10,
-    sortBy: "newest",
-  });
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  };
 
-  const products = result.items;
-  const pagination = result.pagination;
+  try {
+    const result = await ProductService.getFarmerProducts(user.userId, {
+      search: searchParams.search,
+      status: searchParams.status as any,
+      sector: searchParams.sector as any,
+      page: currentPage,
+      limit: 10,
+      sortBy: "newest",
+    });
+    products = result.items;
+    pagination = {
+      ...result.pagination,
+      hasNext: result.pagination.page < result.pagination.totalPages,
+      hasPrev: result.pagination.page > 1,
+    };
+  } catch (err) {
+    console.warn("Farmer products database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -88,10 +105,12 @@ export default async function FarmerProductsPage({
             { label: "Products", current: true },
           ]}
           actions={
-            <Link href="/farmer/products/new">
-              <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                Add New Product
-              </Button>
+            <Link
+              href="/farmer/products/new"
+              className="inline-flex items-center justify-center font-heading font-semibold text-xs h-8 px-3 rounded-sm gap-1.5 bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add New Product</span>
             </Link>
           }
         />

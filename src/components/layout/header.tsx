@@ -62,14 +62,15 @@ export function Header({
 
         {/* Global Search Bar (Desktop) */}
         <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-neutral" />
+          <form action="/marketplace" method="GET" className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-neutral pointer-events-none" />
             <input
+              name="search"
               type="text"
               placeholder="Search crops, seafood, equipment, services..."
               className="w-full h-9 pl-9 pr-4 rounded border border-surface-dim bg-surface-low text-sm font-body text-on-surface placeholder:text-slate-neutral/70 focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:bg-white transition-all"
             />
-          </div>
+          </form>
         </div>
 
         {/* Header Right Actions */}
@@ -109,15 +110,15 @@ export function Header({
               <Link
                 href={
                   userRole === "FARMER"
-                    ? "/farmer"
+                    ? "/farmer/profile"
                     : userRole === "BUYER"
-                    ? "/buyer"
+                    ? "/buyer/profile"
                     : userRole === "AGENT"
-                    ? "/agent"
+                    ? "/agent/profile"
                     : userRole === "SERVICE_PROVIDER"
                     ? "/provider"
                     : userRole === "ADMIN"
-                    ? "/admin"
+                    ? "/admin/settings"
                     : "/"
                 }
                 className="hidden sm:flex items-center gap-2 pl-2 border-l border-surface-dim hover:opacity-80 transition-opacity"

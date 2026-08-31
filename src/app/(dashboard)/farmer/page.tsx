@@ -67,10 +67,12 @@ export default async function FarmerDashboardPage() {
           badge={<Badge variant="primary">Verified Producer</Badge>}
           actions={
             <div className="flex items-center gap-2.5">
-              <Link href="/farmer/products/new">
-                <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                  Add Commodity
-                </Button>
+              <Link
+                href="/farmer/products/new"
+                className="inline-flex items-center justify-center font-heading font-semibold text-xs h-8 px-3 rounded-sm gap-1.5 bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm transition-all"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Commodity</span>
               </Link>
             </div>
           }
@@ -78,34 +80,42 @@ export default async function FarmerDashboardPage() {
 
         {/* KPI Stats Grid */}
         <StatGrid columns={4}>
-          <StatCard
-            title="Active Marketplace"
-            value={stats.activeProducts}
-            timeframe="Live on B2B Catalog"
-            icon={PackageCheck}
-            iconVariant="primary"
-          />
-          <StatCard
-            title="Pending Moderation"
-            value={stats.pendingModeration}
-            timeframe="Under Agent/Admin Review"
-            icon={Clock}
-            iconVariant="warning"
-          />
-          <StatCard
-            title="Out of Stock"
-            value={stats.outOfStock}
-            timeframe="Zero Available Inventory"
-            icon={AlertTriangle}
-            iconVariant="info"
-          />
-          <StatCard
-            title="Registered Farms"
-            value={farms.length}
-            timeframe="Acreage & Ponds"
-            icon={Sprout}
-            iconVariant="secondary"
-          />
+          <Link href="/farmer/products" className="block group">
+            <StatCard
+              title="Active Marketplace"
+              value={stats.activeProducts}
+              timeframe="Live on B2B Catalog"
+              icon={PackageCheck}
+              iconVariant="primary"
+            />
+          </Link>
+          <Link href="/farmer/products" className="block group">
+            <StatCard
+              title="Pending Moderation"
+              value={stats.pendingModeration}
+              timeframe="Under Agent/Admin Review"
+              icon={Clock}
+              iconVariant="warning"
+            />
+          </Link>
+          <Link href="/farmer/products" className="block group">
+            <StatCard
+              title="Out of Stock"
+              value={stats.outOfStock}
+              timeframe="Zero Available Inventory"
+              icon={AlertTriangle}
+              iconVariant="info"
+            />
+          </Link>
+          <Link href="/farmer/farms" className="block group">
+            <StatCard
+              title="Registered Farms"
+              value={farms.length}
+              timeframe="Acreage & Ponds"
+              icon={Sprout}
+              iconVariant="secondary"
+            />
+          </Link>
         </StatGrid>
 
         {/* Quick Operational Actions */}

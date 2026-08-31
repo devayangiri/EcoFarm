@@ -14,10 +14,18 @@ export const dynamic = "force-dynamic";
 
 export default async function FarmerOrdersPage() {
   const session = await getCurrentUser();
-  const { orders } = await OrderService.getSellerOrders(session!.userId);
+  let orders: any[] = [];
+  try {
+    if (session?.userId) {
+      const res = await OrderService.getSellerOrders(session.userId);
+      orders = res.orders;
+    }
+  } catch (err) {
+    console.warn("Farmer orders database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
-    <AppShell userRole="FARMER" userName={session?.fullName}>
+    <AppShell showSidebar userRole="FARMER" userName={session?.fullName} currentPath="/farmer/orders">
       <div className="py-6 max-w-stitch-container mx-auto space-y-6 text-left font-body">
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-bold text-on-surface">Producer Sales & Fulfillment</h1>
@@ -56,18 +64,19 @@ export default async function FarmerOrdersPage() {
                     <span className="font-heading font-extrabold text-base text-brand-primary block">
                       {formatCurrency(order.sellerTotal.toNumber())}
                     </span>
-                    <Link href={`/farmer/orders/${order.id}`}>
-                      <Button variant="outline" size="sm" className="gap-1 mt-1 text-xs">
-                        <span>Fulfill Order</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Button>
+                    <Link
+                      href={`/farmer/orders/${order.id}`}
+                      className="inline-flex items-center justify-center font-heading font-semibold text-xs h-8 px-3 rounded-sm gap-1 mt-1 border border-surface-dim bg-white text-on-surface hover:bg-surface-low hover:border-brand-secondary/40 shadow-sm transition-all"
+                    >
+                      <span>Fulfill Order</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                 </div>
 
                 <div className="text-xs text-slate-neutral space-y-1">
                   <span className="font-semibold text-on-surface">Items Ordered:</span>
-                  <p>{order.items.map((it) => `${it.productTitleSnapshot} (${it.quantity.toString()} ${it.unitSnapshot})`).join(", ")}</p>
+                  <p>{order.items.map((it: any) => `${it.productTitleSnapshot} (${it.quantity.toString()} ${it.unitSnapshot})`).join(", ")}</p>
                 </div>
               </Card>
             ))}

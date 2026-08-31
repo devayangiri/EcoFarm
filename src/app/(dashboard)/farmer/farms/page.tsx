@@ -13,7 +13,12 @@ export const dynamic = "force-dynamic";
 
 export default async function FarmerFarmsPage() {
   const user = await requireRole("FARMER");
-  const farms = await FarmService.getFarmerFarms(user.userId);
+  let farms: any[] = [];
+  try {
+    farms = await FarmService.getFarmerFarms(user.userId);
+  } catch (err) {
+    console.warn("Farmer farms database query fallback:", err instanceof Error ? err.message : err);
+  }
 
   return (
     <AppShell showSidebar userRole="FARMER" userName={user.fullName} currentPath="/farmer/farms">
