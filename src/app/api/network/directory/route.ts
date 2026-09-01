@@ -32,7 +32,18 @@ export async function GET(request: NextRequest) {
       data: result.items,
       pagination: result.pagination,
     });
-  } catch (error) {
-    return handleError(error);
+  } catch (error: any) {
+    console.error("[NetworkDirectoryAPI] Error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: error?.message || "An unexpected internal server error occurred",
+          meta: error?.meta,
+        },
+      },
+      { status: 500 }
+    );
   }
 }
