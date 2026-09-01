@@ -48,6 +48,7 @@ export function ProductCard({
   onAddToCart,
 }: ProductCardProps) {
   const isOutOfStock = availableStock <= 0;
+  const targetIdentifier = slug || id;
 
   return (
     <Card className="group overflow-hidden rounded-lg border border-surface-dim bg-white transition-all hover:shadow-md hover:border-brand-secondary/30 flex flex-col justify-between">
@@ -117,7 +118,7 @@ export function ProductCard({
             <span className="text-[11px] font-heading font-semibold uppercase tracking-wider text-brand-secondary">
               {category}
             </span>
-            <Link href={`/marketplace/${id}`} className="block">
+            <Link href={`/marketplace/${targetIdentifier}`} className="block">
               <h3 className="font-heading text-sm font-bold text-on-surface line-clamp-1 group-hover:text-brand-primary transition-colors">
                 {title}
               </h3>
@@ -158,7 +159,7 @@ export function ProductCard({
           </div>
         </div>
 
-        <Link href={`/marketplace/${id}`}>
+        <Link href={`/marketplace/${targetIdentifier}`}>
           <Button
             variant="secondary"
             size="sm"

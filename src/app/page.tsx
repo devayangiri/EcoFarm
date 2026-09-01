@@ -19,58 +19,35 @@ import { ProductCard } from "@/components/cards/product-card";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { getCurrentUser } from "@/lib/rbac";
 
+import { MarketplaceService } from "@/services/marketplace.service";
+import { MarketplaceSearchSchema } from "@/lib/validators/marketplace.schema";
+import { AlertCircle } from "lucide-react";
+
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const session = await getCurrentUser();
-  const featuredProducts = [
-    {
-      id: "feat-1",
-      slug: "swarna-paddy-grain-grade-a-purba-bardhaman",
-      title: "Swarna High-Yield Paddy Grain (Grade A)",
-      sector: "AGRICULTURE" as const,
-      category: "Cereals & Grains",
-      variety: "Swarna (MTU 7029)",
-      pricePerUnit: 2180.0,
-      unit: "QUINTAL",
-      availableStock: 500,
-      sellerName: "Ramesh Kumar",
-      isSellerVerified: true,
-      locationDistrict: "Purba Bardhaman",
-      locationState: "West Bengal",
-      imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
-    },
-    {
-      id: "feat-2",
-      slug: "live-premium-rohu-freshwater-fish",
-      title: "Live Premium Rohu Fish (Labeo rohita 1.5kg+)",
-      sector: "AQUACULTURE" as const,
-      category: "Freshwater Fish",
-      variety: "Rohu (Labeo rohita)",
-      pricePerUnit: 185.0,
-      unit: "KG",
-      availableStock: 8000,
-      sellerName: "Ramesh Kumar",
-      isSellerVerified: true,
-      locationDistrict: "Purba Bardhaman",
-      locationState: "West Bengal",
-      imageUrl: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600",
-    },
-    {
-      id: "feat-3",
-      slug: "jyoti-grade-1-cold-store-potato-singur",
-      title: "Jyoti Grade-1 Cold-Store Seed Potato",
-      sector: "AGRICULTURE" as const,
-      category: "Root Vegetables",
-      variety: "Kufri Jyoti",
-      pricePerUnit: 1450.0,
-      unit: "QUINTAL",
-      availableStock: 1200,
-      sellerName: "Animesh Mondal",
-      isSellerVerified: true,
-      locationDistrict: "Hooghly",
-      locationState: "West Bengal",
-      imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=600",
-    },
-  ];
+
+  let featuredProducts: any[] = [];
+  let isDbUnavailable = false;
+
+  try {
+    const searchParams = MarketplaceSearchSchema.parse({
+      page: 1,
+      pageSize: 3,
+      sortBy: "newest",
+    });
+    const searchResult = await MarketplaceService.searchProducts(searchParams);
+    featuredProducts = searchResult.items || [];
+  } catch (err: any) {
+    isDbUnavailable = true;
+    console.error("[Homepage] Featured products query failed:", {
+      route: "/",
+      errorCategory: "DATABASE_UNAVAILABLE",
+      message: err instanceof Error ? err.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   const pillars = [
     {
@@ -116,16 +93,64 @@ export default async function HomePage() {
         <div className="mx-auto max-w-stitch-container px-4 sm:px-6 lg:px-8 space-y-6">
           <SectionHeader
             title="Featured Harvests & Aquaculture"
-            subtitle="Verified wholesale listings with guaranteed quantity and direct producer pricing."
+            subtitle="Verified wholesale listings with direct producer pricing."
             actionHref="/marketplace"
-            actionLabel="View All 500+ Commodities"
+            actionLabel="Explore All Commodities"
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredProducts.map((p) => (
-              <ProductCard key={p.id} {...p} />
-            ))}
-          </div>
+          {isDbUnavailable ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-6 text-center space-y-2">
+              <div className="flex items-center justify-center gap-2 text-amber-800 font-heading font-semibold text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>Commodity Catalog Temporarily Unavailable</span>
+              </div>
+              <p className="text-xs text-amber-700 max-w-md mx-auto">
+                Unable to load live listings at this moment. Our team has been alerted. Please explore the directory or try refreshing.
+              </p>
+            </div>
+          ) : featuredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredProducts.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  id={p.id}
+                  slug={p.slug}
+                  title={p.title}
+                  sector={p.sector}
+                  category={p.category}
+                  variety={p.variety}
+                  pricePerUnit={p.pricePerUnit}
+                  unit={p.unit}
+                  availableStock={p.availableStock}
+                  sellerName={p.seller?.fullName || p.sellerName || "Verified Producer"}
+                  isSellerVerified={p.seller?.isVerified ?? p.isSellerVerified ?? true}
+                  locationDistrict={p.locationDistrict}
+                  locationState={p.locationState}
+                  imageUrl={p.imageUrl}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-surface-dim p-8 text-center bg-surface/50 space-y-3">
+              <Sprout className="h-10 w-10 text-slate-neutral/40 mx-auto" />
+              <div className="space-y-1">
+                <p className="font-heading font-semibold text-on-surface text-base">
+                  No Featured Commodities Listed Yet
+                </p>
+                <p className="text-xs text-slate-neutral max-w-md mx-auto">
+                  Verified wholesale agricultural and aquaculture harvests will appear here as soon as registered producers list their inventory.
+                </p>
+              </div>
+              <div className="pt-2 flex items-center justify-center gap-3">
+                <Link href="/marketplace">
+                  <Button variant="outline" size="sm">Explore Marketplace</Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="primary" size="sm">List Your Harvest</Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

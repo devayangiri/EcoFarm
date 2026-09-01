@@ -57,6 +57,8 @@ export default async function PublicMarketplacePage({
     states: [] as string[],
   };
 
+  let isDbUnavailable = false;
+
   try {
     const [fetchedResult, fetchedFacets] = await Promise.all([
       MarketplaceService.searchProducts(validated, session?.userId),
@@ -64,8 +66,14 @@ export default async function PublicMarketplacePage({
     ]);
     result = fetchedResult as any;
     facets = fetchedFacets as any;
-  } catch (err) {
-    console.warn("Marketplace database query fallback:", err instanceof Error ? err.message : err);
+  } catch (err: any) {
+    isDbUnavailable = true;
+    console.error("[Marketplace] Database query failed:", {
+      route: "/marketplace",
+      errorCategory: "DATABASE_UNAVAILABLE",
+      message: err instanceof Error ? err.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
   }
 
   return (
@@ -84,15 +92,34 @@ export default async function PublicMarketplacePage({
           </p>
         </div>
 
-        <MarketplaceShell>
-          <MarketplaceBrowser
-            initialProducts={result.items as any}
-            pagination={result.pagination}
-            currentSector={(validated.sector as any) || "ALL"}
-            facets={facets}
-            isBuyerPortal={false}
-          />
-        </MarketplaceShell>
+        {isDbUnavailable ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-8 text-center space-y-4 max-w-xl mx-auto my-8">
+            <div className="flex items-center justify-center gap-2 text-amber-800 font-heading font-semibold text-sm">
+              <span>Marketplace Catalog Temporarily Unavailable</span>
+            </div>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              We are currently unable to connect to the commodity catalog database. Our technical team has been notified. Please try refreshing shortly.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <a
+                href="/marketplace"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-md bg-brand-primary text-white hover:bg-brand-primary/90 transition-colors"
+              >
+                Retry Connection
+              </a>
+            </div>
+          </div>
+        ) : (
+          <MarketplaceShell>
+            <MarketplaceBrowser
+              initialProducts={result.items as any}
+              pagination={result.pagination}
+              currentSector={(validated.sector as any) || "ALL"}
+              facets={facets}
+              isBuyerPortal={false}
+            />
+          </MarketplaceShell>
+        )}
       </div>
     </AppShell>
   );

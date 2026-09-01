@@ -50,11 +50,19 @@ export default async function ServicesDirectoryPage({
     pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
   };
 
+  let isDbUnavailable = false;
+
   try {
     const fetchedResult = await ServiceService.searchServices(validated);
     result = fetchedResult as any;
-  } catch (err) {
-    console.warn("Services database query fallback:", err instanceof Error ? err.message : err);
+  } catch (err: any) {
+    isDbUnavailable = true;
+    console.error("[Services] Database query failed:", {
+      route: "/services",
+      errorCategory: "DATABASE_UNAVAILABLE",
+      message: err instanceof Error ? err.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
   }
 
   return (
@@ -73,10 +81,29 @@ export default async function ServicesDirectoryPage({
           </p>
         </div>
 
-        <ServiceDirectoryBrowser
-          initialServices={result.items}
-          pagination={result.pagination}
-        />
+        {isDbUnavailable ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-8 text-center space-y-4 max-w-xl mx-auto my-8">
+            <div className="flex items-center justify-center gap-2 text-amber-800 font-heading font-semibold text-sm">
+              <span>Services Directory Temporarily Unavailable</span>
+            </div>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              We are currently unable to connect to the agricultural services database. Our team has been notified. Please try refreshing shortly.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <a
+                href="/services"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-md bg-brand-primary text-white hover:bg-brand-primary/90 transition-colors"
+              >
+                Retry Connection
+              </a>
+            </div>
+          </div>
+        ) : (
+          <ServiceDirectoryBrowser
+            initialServices={result.items}
+            pagination={result.pagination}
+          />
+        )}
       </div>
     </AppShell>
   );

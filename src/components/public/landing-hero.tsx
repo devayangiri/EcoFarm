@@ -51,34 +51,34 @@ export function LandingHero() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-12 border-t border-surface-dim/80 text-left">
             <div className="p-4 bg-white rounded-lg border border-surface-dim shadow-stitch-card">
               <div className="flex items-center gap-2 text-brand-primary mb-1">
-                <Sprout className="h-5 w-5" />
-                <span className="font-heading font-bold text-lg sm:text-xl">500+ MT</span>
+                <Sprout className="h-5 w-5 shrink-0" />
+                <span className="font-heading font-bold text-sm sm:text-base text-on-surface">Direct B2B Trade</span>
               </div>
-              <p className="text-xs text-slate-neutral font-body font-medium">Agricultural Produce</p>
+              <p className="text-xs text-slate-neutral font-body font-medium">Agriculture & Aquaculture Produce</p>
             </div>
 
             <div className="p-4 bg-white rounded-lg border border-surface-dim shadow-stitch-card">
               <div className="flex items-center gap-2 text-brand-secondary mb-1">
-                <Waves className="h-5 w-5" />
-                <span className="font-heading font-bold text-lg sm:text-xl">100% Live</span>
+                <Waves className="h-5 w-5 shrink-0" />
+                <span className="font-heading font-bold text-sm sm:text-base text-on-surface">Cold-Chain Services</span>
               </div>
-              <p className="text-xs text-slate-neutral font-body font-medium">Freshwater Fish Logistics</p>
+              <p className="text-xs text-slate-neutral font-body font-medium">Freshwater Fish & Harvest Handling</p>
             </div>
 
             <div className="p-4 bg-white rounded-lg border border-surface-dim shadow-stitch-card">
               <div className="flex items-center gap-2 text-status-success mb-1">
-                <ShieldCheck className="h-5 w-5" />
-                <span className="font-heading font-bold text-lg sm:text-xl">KYB / KYC</span>
+                <ShieldCheck className="h-5 w-5 shrink-0" />
+                <span className="font-heading font-bold text-sm sm:text-base text-on-surface">Producer Verification</span>
               </div>
-              <p className="text-xs text-slate-neutral font-body font-medium">Direct Farmer Verification</p>
+              <p className="text-xs text-slate-neutral font-body font-medium">Verified Farmer & Enterprise Workflows</p>
             </div>
 
             <div className="p-4 bg-white rounded-lg border border-surface-dim shadow-stitch-card">
-              <div className="flex items-center gap-2 text-on-surface mb-1">
-                <TrendingUp className="h-5 w-5" />
-                <span className="font-heading font-bold text-lg sm:text-xl">0% Fraud</span>
+              <div className="flex items-center gap-2 text-brand-primary mb-1">
+                <TrendingUp className="h-5 w-5 shrink-0" />
+                <span className="font-heading font-bold text-sm sm:text-base text-on-surface">Secure Infrastructure</span>
               </div>
-              <p className="text-xs text-slate-neutral font-body font-medium">Escrow & Secure Payments</p>
+              <p className="text-xs text-slate-neutral font-body font-medium">B2B Order & Payment Protection</p>
             </div>
           </div>
         </div>
