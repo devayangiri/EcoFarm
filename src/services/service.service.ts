@@ -103,12 +103,6 @@ export class ServiceService {
               userId: true,
               businessName: true,
               isVerified: true,
-              user: {
-                select: {
-                  fullName: true,
-                  avatarUrl: true,
-                } as any,
-              },
             },
           },
         },
