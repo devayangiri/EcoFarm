@@ -6,7 +6,7 @@ export const SESSION_COOKIE_NAME = "agri_aqua_session";
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 function getJwtSecretKey(): Uint8Array {
-  const secret = process.env.NEXTAUTH_SECRET || "agri-aqua-network-phase-1-dev-secret-key-change-in-prod";
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "agri-aqua-network-phase-1-dev-secret-key-change-in-prod";
   return new Uint8Array(Buffer.from(secret, "utf-8"));
 }
 

@@ -5,7 +5,7 @@ import { jwtVerify } from "jose";
 const SESSION_COOKIE_NAME = "agri_aqua_session";
 
 function getJwtSecret(): Uint8Array {
-  const secret = process.env.NEXTAUTH_SECRET || "agri-aqua-network-phase-1-dev-secret-key-change-in-prod";
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "agri-aqua-network-phase-1-dev-secret-key-change-in-prod";
   return new TextEncoder().encode(secret);
 }
 
