@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/rbac";
 import { AppError } from "@/lib/errors";
 import type { ApiResponse } from "@/types/api";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const user = await getCurrentUser();

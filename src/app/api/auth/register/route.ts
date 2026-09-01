@@ -6,6 +6,8 @@ import { AppError } from "@/lib/errors";
 import { getSessionCookieOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/types/api";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();

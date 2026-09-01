@@ -3,6 +3,8 @@ import type { ApiResponse } from "@/types/api";
 
 const startTime = Date.now();
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
 

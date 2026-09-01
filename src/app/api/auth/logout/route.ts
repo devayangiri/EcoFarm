@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { SESSION_COOKIE_NAME } from "@/lib/auth";
 import type { ApiResponse } from "@/types/api";
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   const cookieStore = cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
