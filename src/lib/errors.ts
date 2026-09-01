@@ -8,7 +8,8 @@ export type ErrorCode =
   | "CONFLICT"
   | "RATE_LIMITED"
   | "INSUFFICIENT_INVENTORY"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "SERVICE_UNAVAILABLE";
 
 export class AppError extends Error {
   public readonly code: ErrorCode;
@@ -51,6 +52,10 @@ export class AppError extends Error {
   static internal(message: string = "Internal server error") {
     return new AppError("INTERNAL_ERROR", message, 500);
   }
+
+  static serviceUnavailable(message: string = "Service temporarily unavailable", details?: unknown) {
+    return new AppError("SERVICE_UNAVAILABLE", message, 503, details);
+  }
 }
 
 export function handleError(error: unknown) {
@@ -65,6 +70,36 @@ export function handleError(error: unknown) {
         },
       },
       { status: error.statusCode }
+    );
+  }
+
+  // Detect database connectivity and initialization outages (Section 20: return 503)
+  const isDbUnavailable =
+    (error &&
+      typeof error === "object" &&
+      "name" in error &&
+      (error.name === "PrismaClientInitializationError" ||
+        error.name === "PrismaClientRustPanicError" ||
+        (error as any).code === "P1001" ||
+        (error as any).code === "P1002" ||
+        (error as any).code === "P1008" ||
+        (error as any).code === "P1017")) ||
+    (error instanceof Error && error.message.includes("Can't reach database server"));
+
+  if (isDbUnavailable) {
+    console.error("[DependencyError] Database service unavailable:", {
+      name: (error as any).name,
+      code: (error as any).code,
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database service is temporarily unavailable. Please retry shortly.",
+        },
+      },
+      { status: 503 }
     );
   }
 
