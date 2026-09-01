@@ -17,6 +17,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+import { AppError } from "@/lib/errors";
+
 export const dynamic = "force-dynamic";
 
 interface ServiceDetailPageProps {
@@ -25,10 +27,46 @@ interface ServiceDetailPageProps {
 
 export default async function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   let service;
+  let isDbError = false;
+
   try {
     service = await ServiceService.getServiceDetails(params.id);
-  } catch {
-    notFound();
+  } catch (err: any) {
+    if (err instanceof AppError && err.statusCode === 404) {
+      notFound();
+    }
+    isDbError = true;
+    console.error("[ServiceDetailPage] Error fetching service:", {
+      route: `/services/${params.id}`,
+      errorCategory: "DATABASE_UNAVAILABLE",
+      message: err instanceof Error ? err.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (isDbError || !service) {
+    return (
+      <MarketplaceShell>
+        <div className="py-12 max-w-stitch-container mx-auto px-4 text-center">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-8 max-w-md mx-auto space-y-4">
+            <h2 className="font-heading text-lg font-bold text-amber-900">
+              Service Listing Temporarily Unavailable
+            </h2>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              We are currently unable to connect to the services database to retrieve this listing. Our team has been notified.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <a
+                href="/services"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-md bg-brand-primary text-white hover:bg-brand-primary/90 transition-colors"
+              >
+                Back to Services
+              </a>
+            </div>
+          </div>
+        </div>
+      </MarketplaceShell>
+    );
   }
 
   return (
