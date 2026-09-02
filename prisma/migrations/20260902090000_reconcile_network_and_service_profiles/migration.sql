@@ -3,12 +3,6 @@
 -- Reconciles production DDL with Prisma migration history
 -- ====================================================
 
--- 1. Enum: ServiceStatus (for service_listings)
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ServiceStatus') THEN
-    CREATE TYPE "ServiceStatus" AS ENUM ('ACTIVE', 'PAUSED', 'ARCHIVED');
-  END IF;
-END $$;
 
 -- 2. Alter Table: network_profiles (add missing columns)
 ALTER TABLE "network_profiles" ADD COLUMN IF NOT EXISTS "participantType" TEXT;
