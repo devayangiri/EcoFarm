@@ -885,12 +885,16 @@ export class NetworkService {
     userId: string,
     input: UpdateNetworkProfileInput
   ) {
+    const existing = await prisma.networkProfile.findUnique({ where: { userId } });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const resolvedDisplayName = input.displayName || existing?.displayName || user?.fullName || "Participant";
+
     const profile = await prisma.$transaction(async (tx) => {
       const updated = await tx.networkProfile.upsert({
         where: { userId },
         create: {
           userId,
-          displayName: input.displayName,
+          displayName: resolvedDisplayName,
           headline: input.headline || null,
           bio: input.bio || null,
           participantType: input.participantType || null,
@@ -904,18 +908,18 @@ export class NetworkService {
           businessRegNumber: input.businessRegNumber || null,
         },
         update: {
-          displayName: input.displayName,
-          headline: input.headline || null,
-          bio: input.bio || null,
-          participantType: input.participantType || null,
-          businessCategory: input.businessCategory || null,
-          sector: input.sector || null,
-          district: input.district || null,
-          state: input.state || null,
-          avatarUrl: input.avatarUrl || null,
-          websiteUrl: input.websiteUrl || null,
-          isBusiness: input.isBusiness ?? false,
-          businessRegNumber: input.businessRegNumber || null,
+          ...(input.displayName ? { displayName: input.displayName } : {}),
+          headline: input.headline !== undefined ? input.headline : undefined,
+          bio: input.bio !== undefined ? input.bio : undefined,
+          participantType: input.participantType !== undefined ? input.participantType : undefined,
+          businessCategory: input.businessCategory !== undefined ? input.businessCategory : undefined,
+          sector: input.sector !== undefined ? input.sector : undefined,
+          district: input.district !== undefined ? input.district : undefined,
+          state: input.state !== undefined ? input.state : undefined,
+          avatarUrl: input.avatarUrl !== undefined ? input.avatarUrl : undefined,
+          websiteUrl: input.websiteUrl !== undefined ? input.websiteUrl : undefined,
+          isBusiness: input.isBusiness !== undefined ? input.isBusiness : undefined,
+          businessRegNumber: input.businessRegNumber !== undefined ? input.businessRegNumber : undefined,
         },
       });
 

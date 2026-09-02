@@ -32,7 +32,7 @@ export const CreateNetworkEnquirySchema = z.object({
 });
 
 export const UpdateNetworkProfileSchema = z.object({
-  displayName: z.string().trim().min(2, "Display name must be at least 2 characters").max(100),
+  displayName: z.string().trim().min(2, "Display name must be at least 2 characters").max(100).optional(),
   headline: z.string().trim().max(150, "Headline cannot exceed 150 characters").optional().nullable(),
   bio: z.string().trim().max(1000, "Bio cannot exceed 1000 characters").optional().nullable(),
   participantType: z.string().trim().max(50).optional().nullable(),

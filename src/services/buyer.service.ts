@@ -250,81 +250,93 @@ export class BuyerService {
   static async getSavedProducts(buyerId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
 
-    const [saved, total] = await Promise.all([
-      prisma.savedProduct.findMany({
-        where: { buyerId },
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          product: {
-            select: {
-              id: true,
-              slug: true,
-              title: true,
-              description: true,
-              sector: true,
-              category: true,
-              variety: true,
-              pricePerUnit: true,
-              unit: true,
-              minimumOrderQuantity: true,
-              availableStock: true,
-              locationDistrict: true,
-              locationState: true,
-              status: true,
-              images: {
-                where: { isPrimary: true },
-                take: 1,
-                select: { url: true },
-              },
-              seller: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  farmerProfile: { select: { isVerified: true } },
+    try {
+      const [saved, total] = await Promise.all([
+        prisma.savedProduct.findMany({
+          where: { buyerId },
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          include: {
+            product: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                description: true,
+                sector: true,
+                category: true,
+                variety: true,
+                pricePerUnit: true,
+                unit: true,
+                minimumOrderQuantity: true,
+                availableStock: true,
+                locationDistrict: true,
+                locationState: true,
+                status: true,
+                images: {
+                  where: { isPrimary: true },
+                  take: 1,
+                  select: { url: true },
+                },
+                seller: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    farmerProfile: { select: { isVerified: true } },
+                  },
                 },
               },
             },
           },
+        }),
+        prisma.savedProduct.count({ where: { buyerId } }),
+      ]);
+
+      const items = saved.map((s) => ({
+        savedId: s.id,
+        savedAt: s.createdAt,
+        product: {
+          id: s.product.id,
+          slug: s.product.slug,
+          title: s.product.title,
+          description: s.product.description,
+          sector: s.product.sector,
+          category: s.product.category,
+          variety: s.product.variety,
+          pricePerUnit: s.product.pricePerUnit.toNumber(),
+          unit: s.product.unit,
+          minimumOrderQuantity: s.product.minimumOrderQuantity.toNumber(),
+          availableStock: s.product.availableStock.toNumber(),
+          locationDistrict: s.product.locationDistrict,
+          locationState: s.product.locationState,
+          status: s.product.status,
+          imageUrl: s.product.images[0]?.url || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
+          sellerName: s.product.seller.fullName,
+          isSellerVerified: s.product.seller.farmerProfile?.isVerified ?? false,
         },
-      }),
-      prisma.savedProduct.count({ where: { buyerId } }),
-    ]);
+      }));
 
-    const items = saved.map((s) => ({
-      savedId: s.id,
-      savedAt: s.createdAt,
-      product: {
-        id: s.product.id,
-        slug: s.product.slug,
-        title: s.product.title,
-        description: s.product.description,
-        sector: s.product.sector,
-        category: s.product.category,
-        variety: s.product.variety,
-        pricePerUnit: s.product.pricePerUnit.toNumber(),
-        unit: s.product.unit,
-        minimumOrderQuantity: s.product.minimumOrderQuantity.toNumber(),
-        availableStock: s.product.availableStock.toNumber(),
-        locationDistrict: s.product.locationDistrict,
-        locationState: s.product.locationState,
-        status: s.product.status,
-        imageUrl: s.product.images[0]?.url || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
-        sellerName: s.product.seller.fullName,
-        isSellerVerified: s.product.seller.farmerProfile?.isVerified ?? false,
-      },
-    }));
-
-    return {
-      items,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+      return {
+        items,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1,
+        },
+      };
+    } catch {
+      return {
+        items: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 1,
+        },
+      };
+    }
   }
 
   /**

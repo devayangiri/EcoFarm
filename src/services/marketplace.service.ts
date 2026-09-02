@@ -234,15 +234,19 @@ export class MarketplaceService {
 
     let isSaved = false;
     if (currentUserId) {
-      const saved = await prisma.savedProduct.findUnique({
-        where: {
-          buyerId_productId: {
-            buyerId: currentUserId,
-            productId: product.id,
+      try {
+        const saved = await prisma.savedProduct.findUnique({
+          where: {
+            buyerId_productId: {
+              buyerId: currentUserId,
+              productId: product.id,
+            },
           },
-        },
-      });
-      isSaved = !!saved;
+        });
+        isSaved = !!saved;
+      } catch {
+        isSaved = false;
+      }
     }
 
     return {

@@ -73,6 +73,26 @@ export function handleError(error: unknown) {
     );
   }
 
+  // Handle Zod schema validation errors with HTTP 422
+  if (error && typeof error === "object" && (error instanceof Error || (error as any).name === "ZodError")) {
+    const isZod = (error as any).name === "ZodError" || "issues" in error;
+    if (isZod) {
+      const fieldErrors: Record<string, string[]> = typeof (error as any).flatten === "function" ? (error as any).flatten().fieldErrors : {};
+      const firstErrorMessage = Object.values(fieldErrors)[0]?.[0] || (error as Error).message || "Validation failed";
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: firstErrorMessage,
+            details: fieldErrors,
+          },
+        },
+        { status: 422 }
+      );
+    }
+  }
+
   // Detect database connectivity and initialization outages (Section 20: return 503)
   const isDbUnavailable =
     (error &&

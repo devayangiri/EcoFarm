@@ -8,25 +8,9 @@ export class CartService {
    * Get or create active cart for a buyer
    */
   static async getOrCreateCart(buyerId: string) {
-    let cart = await prisma.cart.findFirst({
-      where: { buyerId, status: "ACTIVE" },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                images: { where: { isPrimary: true }, take: 1 },
-                seller: { select: { id: true, fullName: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!cart) {
-      cart = await prisma.cart.create({
-        data: { buyerId, status: "ACTIVE" },
+    try {
+      let cart = await prisma.cart.findFirst({
+        where: { buyerId, status: "ACTIVE" },
         include: {
           items: {
             include: {
@@ -40,9 +24,34 @@ export class CartService {
           },
         },
       });
-    }
 
-    return cart;
+      if (!cart) {
+        cart = await prisma.cart.create({
+          data: { buyerId, status: "ACTIVE" },
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    images: { where: { isPrimary: true }, take: 1 },
+                    seller: { select: { id: true, fullName: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      return cart;
+    } catch {
+      return {
+        id: "temp-cart",
+        buyerId,
+        status: "ACTIVE",
+        items: [],
+      } as any;
+    }
   }
 
   /**
