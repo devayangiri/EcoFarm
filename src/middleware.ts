@@ -119,11 +119,20 @@ export async function middleware(request: NextRequest) {
 
   // 5. Handle auth pages (/login, /register) when already logged in
   if (pathname === "/login" || pathname === "/register" || pathname === "/role-select") {
-    if (isAuthenticated) {
+    const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
+    // Only redirect authenticated users away from /login if there is NO callbackUrl.
+    // If callbackUrl is present, the user was redirected to re-authenticate (e.g. session invalidated),
+    // and we must clear any stale cookie and let them see the login screen to avoid ERR_TOO_MANY_REDIRECTS.
+    if (isAuthenticated && !callbackUrl) {
       const targetDashboard = getRoleDashboardPath(sessionPayload.role);
       return withResponseHeaders(NextResponse.redirect(new URL(targetDashboard, request.url)));
     }
-    return withResponseHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
+
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    if (callbackUrl && request.cookies.has(SESSION_COOKIE_NAME)) {
+      response.cookies.delete(SESSION_COOKIE_NAME);
+    }
+    return withResponseHeaders(response);
   }
 
   // 6. Protected Route Rules
@@ -160,7 +169,11 @@ export async function middleware(request: NextRequest) {
 
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
-      return withResponseHeaders(NextResponse.redirect(loginUrl));
+      const res = NextResponse.redirect(loginUrl);
+      if (request.cookies.has(SESSION_COOKIE_NAME)) {
+        res.cookies.delete(SESSION_COOKIE_NAME);
+      }
+      return withResponseHeaders(res);
     }
 
     // Role-specific dashboard route enforcement

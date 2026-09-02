@@ -164,7 +164,11 @@ export async function getCurrentUser(): Promise<UserSession | null> {
         },
       });
 
-      if (!user || user.status === "SUSPENDED" || user.tokenVersion !== session.tokenVersion) {
+      if (
+        !user ||
+        user.status === "SUSPENDED" ||
+        (session.tokenVersion > 0 && user.tokenVersion !== session.tokenVersion)
+      ) {
         return null;
       }
 
