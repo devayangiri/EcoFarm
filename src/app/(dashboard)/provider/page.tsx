@@ -1,5 +1,6 @@
 import React from "react";
-import { requireRole } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { getCurrentUser, getRoleDashboardPath } from "@/lib/rbac";
 import { ServiceService } from "@/services/service.service";
 import { AppShell } from "@/components/layout/app-shell";
 import { ProviderDashboardView } from "@/components/services/provider-dashboard-view";
@@ -7,7 +8,14 @@ import { ProviderDashboardView } from "@/components/services/provider-dashboard-
 export const dynamic = "force-dynamic";
 
 export default async function ProviderDashboardPage() {
-  const session = await requireRole(["SERVICE_PROVIDER", "ADMIN"]);
+  const session = await getCurrentUser();
+  if (!session) {
+    redirect("/login?callbackUrl=/provider");
+  }
+
+  if (session.role !== "SERVICE_PROVIDER" && session.role !== "ADMIN") {
+    redirect(getRoleDashboardPath(session.role));
+  }
 
   let data = {
     profile: {

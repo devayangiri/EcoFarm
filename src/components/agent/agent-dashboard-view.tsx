@@ -89,6 +89,10 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
   const recentLeads = data?.recentLeads || [];
   const recentVerifications = data?.recentVerifications || [];
 
+  const districts = Array.isArray(profile?.assignedDistricts) && profile.assignedDistricts.length > 0
+    ? profile.assignedDistricts.join(", ")
+    : "East Bardhaman, Hooghly, North 24 Parganas";
+
   return (
     <div className="space-y-6 font-body text-left">
       {/* Top Welcome Banner */}
@@ -103,7 +107,7 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
             </Badge>
           </div>
           <p className="text-xs text-slate-neutral mt-0.5">
-            Operating Territory: <strong className="text-on-surface">{profile.assignedRegionState || "West Bengal"}</strong> ({(profile.assignedDistricts || []).join(", ")})
+            Operating Territory: <strong className="text-on-surface">{profile.assignedRegionState || "West Bengal"}</strong> ({districts})
           </p>
         </div>
 
@@ -180,23 +184,23 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               <div className="space-y-2.5">
                 {recentTasks.map((t) => (
                   <div
-                    key={t.id}
+                    key={t?.id || Math.random()}
                     className="p-3 bg-surface-low rounded border border-surface-dim flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <strong className="font-semibold text-on-surface block truncate">{t.title}</strong>
+                      <strong className="font-semibold text-on-surface block truncate">{t?.title || "Field Task"}</strong>
                       <span className="text-[11px] text-slate-neutral flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Due: {new Date(t.dueDate).toLocaleDateString()}
+                        Due: {t?.dueDate ? new Date(t.dueDate).toLocaleDateString("en-IN") : "Upcoming"}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge
-                        variant={t.priority === "URGENT" || t.priority === "HIGH" ? "error" : "secondary"}
+                        variant={t?.priority === "URGENT" || t?.priority === "HIGH" ? "error" : "secondary"}
                         size="sm"
                       >
-                        {t.priority}
+                        {t?.priority || "NORMAL"}
                       </Badge>
                     </div>
                   </div>
@@ -220,17 +224,17 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               <div className="space-y-2.5">
                 {recentVerifications.map((v) => (
                   <div
-                    key={v.id}
+                    key={v?.id || Math.random()}
                     className="p-3 bg-surface-low rounded border border-surface-dim flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <strong className="font-semibold text-on-surface block truncate">{v.applicantName}</strong>
+                      <strong className="font-semibold text-on-surface block truncate">{v?.applicantName || "Applicant"}</strong>
                       <span className="text-[11px] text-slate-neutral">
-                        {v.applicantRole} • {v.type.replace(/_/g, " ")} • {v.docCount} doc(s)
+                        {v?.applicantRole || "USER"} • {v?.type ? String(v.type).replace(/_/g, " ") : "Identity Verification"} • {v?.docCount ?? 0} doc(s)
                       </span>
                     </div>
 
-                    <Link href={`/agent/verification/${v.id}`}>
+                    <Link href={`/agent/verification/${v?.id || ""}`}>
                       <Button variant="outline" size="sm">
                         Review
                       </Button>
@@ -259,18 +263,18 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               <div className="space-y-2.5">
                 {recentLeads.map((l) => (
                   <div
-                    key={l.id}
+                    key={l?.id || Math.random()}
                     className="p-3 bg-surface-low rounded border border-surface-dim flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <strong className="font-semibold text-on-surface block truncate">{l.contactName}</strong>
+                      <strong className="font-semibold text-on-surface block truncate">{l?.contactName || "Lead Contact"}</strong>
                       <span className="text-[11px] text-slate-neutral">
-                        {l.targetSector} • {l.estimatedValue ? formatCurrency(l.estimatedValue) : "Unestimated"}
+                        {l?.targetSector || "AGRICULTURE"} • {typeof l?.estimatedValue === "number" && !isNaN(l.estimatedValue) ? formatCurrency(l.estimatedValue) : "Unestimated"}
                       </span>
                     </div>
 
-                    <Badge variant={l.stage === "CONVERTED" ? "success" : "primary"} size="sm">
-                      {l.stage}
+                    <Badge variant={l?.stage === "CONVERTED" ? "success" : "primary"} size="sm">
+                      {l?.stage || "NEW"}
                     </Badge>
                   </div>
                 ))}

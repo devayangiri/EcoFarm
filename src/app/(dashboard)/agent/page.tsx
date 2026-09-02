@@ -1,5 +1,6 @@
 import React from "react";
-import { requireRole } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { getCurrentUser, getRoleDashboardPath } from "@/lib/rbac";
 import { AgentService } from "@/services/agent.service";
 import { AppShell } from "@/components/layout/app-shell";
 import { AgentDashboardView } from "@/components/agent/agent-dashboard-view";
@@ -7,13 +8,20 @@ import { AgentDashboardView } from "@/components/agent/agent-dashboard-view";
 export const dynamic = "force-dynamic";
 
 export default async function AgentDashboardPage() {
-  const session = await requireRole(["AGENT", "ADMIN"]);
+  const session = await getCurrentUser();
+  if (!session) {
+    redirect("/login?callbackUrl=/agent");
+  }
+
+  if (session.role !== "AGENT" && session.role !== "ADMIN") {
+    redirect(getRoleDashboardPath(session.role));
+  }
 
   let data = {
     profile: {
-      badgeNumber: `AGT-${session.userId.substring(0, 4).toUpperCase()}`,
-      fullName: session.fullName,
-      email: session.email,
+      badgeNumber: `AGT-${(session.userId || "").substring(0, 4).toUpperCase() || "ACTIVE"}`,
+      fullName: session.fullName || "Field Agent",
+      email: session.email || "",
       assignedRegionState: "West Bengal",
       assignedDistricts: ["East Bardhaman", "Hooghly", "North 24 Parganas"],
     },
