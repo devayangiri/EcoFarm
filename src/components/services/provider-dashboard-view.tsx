@@ -58,6 +58,23 @@ export interface ProviderDashboardViewProps {
 }
 
 export function ProviderDashboardView({ data }: ProviderDashboardViewProps) {
+  const profile = data?.profile || {
+    businessName: "Service Provider Hub",
+    description: "Professional Agricultural & Aquaculture Solutions Provider",
+    isVerified: false,
+    experienceYears: 0,
+  };
+
+  const metrics = data?.metrics || {
+    activeServicesCount: 0,
+    incomingRequestsCount: 0,
+    pendingQuotationsCount: 0,
+    completedServicesCount: 0,
+  };
+
+  const recentRequests = data?.recentRequests || [];
+  const activeServices = data?.activeServices || [];
+
   return (
     <div className="space-y-6 font-body text-left">
       {/* Top Welcome Header */}
@@ -65,13 +82,13 @@ export function ProviderDashboardView({ data }: ProviderDashboardViewProps) {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-heading text-2xl font-bold text-on-surface">
-              {data.profile.businessName}
+              {profile.businessName || "Service Provider Hub"}
             </h1>
-            {data.profile.isVerified && (
+            {profile.isVerified && (
               <ShieldCheck className="h-5 w-5 text-status-success" />
             )}
           </div>
-          <p className="text-xs text-slate-neutral">
+          <p className="text-xs text-slate-neutral mt-0.5">
             Provider Operations Hub • Manage machinery, logistics, warehousing, and testing contracts.
           </p>
         </div>
@@ -89,25 +106,25 @@ export function ProviderDashboardView({ data }: ProviderDashboardViewProps) {
       <StatGrid>
         <StatCard
           title="Active Services"
-          value={data.metrics.activeServicesCount}
+          value={metrics.activeServicesCount ?? 0}
           icon={Wrench}
           iconVariant="primary"
         />
         <StatCard
           title="Incoming Requests"
-          value={data.metrics.incomingRequestsCount}
+          value={metrics.incomingRequestsCount ?? 0}
           icon={Inbox}
           iconVariant="secondary"
         />
         <StatCard
           title="Pending Quotations"
-          value={data.metrics.pendingQuotationsCount}
+          value={metrics.pendingQuotationsCount ?? 0}
           icon={FileText}
           iconVariant="warning"
         />
         <StatCard
           title="Completed Contracts"
-          value={data.metrics.completedServicesCount}
+          value={metrics.completedServicesCount ?? 0}
           icon={CheckCircle}
           iconVariant="success"
         />
@@ -120,14 +137,14 @@ export function ProviderDashboardView({ data }: ProviderDashboardViewProps) {
           <span className="text-xs text-slate-neutral">Actionable RFQs from producers & buyers</span>
         </div>
 
-        {data.recentRequests.length === 0 ? (
+        {recentRequests.length === 0 ? (
           <EmptyState
             title="No Incoming Service Requests"
             description="When buyers and farmers request your machinery, storage, or transport services, they will appear here."
           />
         ) : (
           <div className="space-y-3">
-            {data.recentRequests.map((req) => (
+            {recentRequests.map((req) => (
               <Card key={req.id} className="border border-surface-dim bg-white shadow-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -136,7 +153,7 @@ export function ProviderDashboardView({ data }: ProviderDashboardViewProps) {
                     <Badge variant={req.status === "OPEN" ? "secondary" : "info"} size="sm">{req.status}</Badge>
                   </div>
                   <p className="text-xs text-slate-neutral">
-                    Client: <strong className="text-on-surface">{req.requesterName}</strong> • Scale: {req.quantityOrScale} • Required Date: {new Date(req.requiredDate).toLocaleDateString()}
+                    Client: <strong className="text-on-surface">{req.requesterName}</strong> • Scale: {req.quantityOrScale} • Required Date: {req.requiredDate ? new Date(req.requiredDate).toLocaleDateString() : "TBD"}
                   </p>
                 </div>
 
@@ -161,20 +178,29 @@ export function ProviderDashboardView({ data }: ProviderDashboardViewProps) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.activeServices.map((s) => (
-            <Card key={s.id} className="border border-surface-dim bg-white shadow-sm p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge variant="primary" size="sm">{s.category.replace(/_/g, " ")}</Badge>
-                <Badge variant={s.status === "ACTIVE" ? "success" : "secondary"} size="sm">{s.status}</Badge>
-              </div>
-              <strong className="font-heading font-bold text-sm text-on-surface block truncate">{s.title}</strong>
-              <span className="font-mono text-brand-primary font-extrabold text-sm block">
-                {formatCurrency(s.basePrice)} <span className="text-xs font-normal text-slate-neutral">({s.pricingModel})</span>
-              </span>
-            </Card>
-          ))}
-        </div>
+        {activeServices.length === 0 ? (
+          <EmptyState
+            title="No Services Listed Yet"
+            description="You have not published any service offerings. List machinery, equipment rental, warehousing, or cold-chain logistics."
+            actionLabel="Publish First Service"
+            actionHref="/provider/services/new"
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeServices.map((s) => (
+              <Card key={s.id} className="border border-surface-dim bg-white shadow-sm p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="primary" size="sm">{s.category.replace(/_/g, " ")}</Badge>
+                  <Badge variant={s.status === "ACTIVE" ? "success" : "secondary"} size="sm">{s.status}</Badge>
+                </div>
+                <strong className="font-heading font-bold text-sm text-on-surface block truncate">{s.title}</strong>
+                <span className="font-mono text-brand-primary font-extrabold text-sm block">
+                  {formatCurrency(s.basePrice)} <span className="text-xs font-normal text-slate-neutral">({s.pricingModel})</span>
+                </span>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -231,12 +231,20 @@ export class ServiceService {
 
     const serviceIds = profile.services.map((s) => s.id);
 
-    const [activeServicesCount, incomingRequests, pendingQuotations, completedCount] =
-      await Promise.all([
-        prisma.serviceListing.count({
-          where: { providerProfileId: profile.id, status: "ACTIVE" },
-        }),
-        prisma.serviceRequest.findMany({
+    let activeServicesCount = profile.services.filter((s) => s.status === "ACTIVE").length;
+    let incomingRequests: any[] = [];
+    let pendingQuotations = 0;
+    let completedCount = 0;
+
+    try {
+      activeServicesCount = await prisma.serviceListing.count({
+        where: { providerProfileId: profile.id, status: "ACTIVE" },
+      });
+    } catch {}
+
+    try {
+      if (serviceIds.length > 0) {
+        incomingRequests = await prisma.serviceRequest.findMany({
           where: {
             serviceId: { in: serviceIds },
             status: { in: ["OPEN", "QUOTATION_SUBMITTED"] },
@@ -247,17 +255,26 @@ export class ServiceService {
           },
           orderBy: { createdAt: "desc" },
           take: 5,
-        }),
-        prisma.serviceQuotation.count({
-          where: { providerId: userId, status: "PENDING" },
-        }),
-        prisma.serviceRequest.count({
+        });
+      }
+    } catch {}
+
+    try {
+      pendingQuotations = await prisma.serviceQuotation.count({
+        where: { providerId: userId, status: "PENDING" },
+      });
+    } catch {}
+
+    try {
+      if (serviceIds.length > 0) {
+        completedCount = await prisma.serviceRequest.count({
           where: {
             serviceId: { in: serviceIds },
             status: "COMPLETED",
           },
-        }),
-      ]);
+        });
+      }
+    } catch {}
 
     return {
       profile: {

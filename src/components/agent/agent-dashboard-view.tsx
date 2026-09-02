@@ -68,6 +68,27 @@ export interface AgentDashboardViewProps {
 }
 
 export function AgentDashboardView({ data }: AgentDashboardViewProps) {
+  const profile = data?.profile || {
+    badgeNumber: "AGT-ACTIVE",
+    fullName: "Field Agent",
+    email: "",
+    assignedRegionState: "West Bengal",
+    assignedDistricts: ["East Bardhaman", "Hooghly", "North 24 Parganas"],
+  };
+
+  const metrics = data?.metrics || {
+    assignedFarmersCount: 0,
+    assignedBuyersCount: 0,
+    assignedBusinessesCount: 0,
+    openLeadsCount: 0,
+    tasksDueCount: 0,
+    pendingVerificationsCount: 0,
+  };
+
+  const recentTasks = data?.recentTasks || [];
+  const recentLeads = data?.recentLeads || [];
+  const recentVerifications = data?.recentVerifications || [];
+
   return (
     <div className="space-y-6 font-body text-left">
       {/* Top Welcome Banner */}
@@ -78,11 +99,11 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               Agent Operations Hub
             </h1>
             <Badge variant="primary" size="sm">
-              Badge: {data.profile.badgeNumber}
+              Badge: {profile.badgeNumber || "AGT-ACTIVE"}
             </Badge>
           </div>
           <p className="text-xs text-slate-neutral mt-0.5">
-            Operating Territory: <strong className="text-on-surface">{data.profile.assignedRegionState}</strong> ({data.profile.assignedDistricts.join(", ")})
+            Operating Territory: <strong className="text-on-surface">{profile.assignedRegionState || "West Bengal"}</strong> ({(profile.assignedDistricts || []).join(", ")})
           </p>
         </div>
 
@@ -104,37 +125,37 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
       <StatGrid columns={3}>
         <StatCard
           title="Assigned Farmers"
-          value={data.metrics.assignedFarmersCount}
+          value={metrics.assignedFarmersCount ?? 0}
           icon={Users}
           iconVariant="primary"
         />
         <StatCard
           title="Assigned Buyers"
-          value={data.metrics.assignedBuyersCount}
+          value={metrics.assignedBuyersCount ?? 0}
           icon={ShoppingBag}
           iconVariant="secondary"
         />
         <StatCard
           title="Assigned Businesses"
-          value={data.metrics.assignedBusinessesCount}
+          value={metrics.assignedBusinessesCount ?? 0}
           icon={Building2}
           iconVariant="info"
         />
         <StatCard
           title="Open CRM Leads"
-          value={data.metrics.openLeadsCount}
+          value={metrics.openLeadsCount ?? 0}
           icon={TrendingUp}
           iconVariant="warning"
         />
         <StatCard
           title="Tasks Due Today"
-          value={data.metrics.tasksDueCount}
+          value={metrics.tasksDueCount ?? 0}
           icon={Clock}
           iconVariant="warning"
         />
         <StatCard
           title="Verification Queue"
-          value={data.metrics.pendingVerificationsCount}
+          value={metrics.pendingVerificationsCount ?? 0}
           icon={ShieldAlert}
           iconVariant="primary"
         />
@@ -153,11 +174,11 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               </Link>
             </div>
 
-            {data.recentTasks.length === 0 ? (
+            {recentTasks.length === 0 ? (
               <p className="text-xs text-slate-neutral py-2">No pending tasks. You are all caught up!</p>
             ) : (
               <div className="space-y-2.5">
-                {data.recentTasks.map((t) => (
+                {recentTasks.map((t) => (
                   <div
                     key={t.id}
                     className="p-3 bg-surface-low rounded border border-surface-dim flex items-center justify-between gap-3 text-xs"
@@ -193,11 +214,11 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               </Link>
             </div>
 
-            {data.recentVerifications.length === 0 ? (
+            {recentVerifications.length === 0 ? (
               <p className="text-xs text-slate-neutral py-2">No verification applications awaiting review.</p>
             ) : (
               <div className="space-y-2.5">
-                {data.recentVerifications.map((v) => (
+                {recentVerifications.map((v) => (
                   <div
                     key={v.id}
                     className="p-3 bg-surface-low rounded border border-surface-dim flex items-center justify-between gap-3 text-xs"
@@ -232,11 +253,11 @@ export function AgentDashboardView({ data }: AgentDashboardViewProps) {
               </Link>
             </div>
 
-            {data.recentLeads.length === 0 ? (
+            {recentLeads.length === 0 ? (
               <p className="text-xs text-slate-neutral py-2">No active leads recorded yet.</p>
             ) : (
               <div className="space-y-2.5">
-                {data.recentLeads.map((l) => (
+                {recentLeads.map((l) => (
                   <div
                     key={l.id}
                     className="p-3 bg-surface-low rounded border border-surface-dim flex items-center justify-between gap-3 text-xs"
