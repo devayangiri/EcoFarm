@@ -70,7 +70,7 @@ export default async function NetworkDirectoryPage({
       <div className="py-6 max-w-stitch-container mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-left font-body">
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-extrabold text-on-surface">
-            B2B Agri-Aqua Business Directory
+            EcoFarm Business Directory
           </h1>
           <p className="text-xs text-slate-neutral">
             Discover verified farmers, commercial buyers, cold chain service providers, and agricultural enterprises.

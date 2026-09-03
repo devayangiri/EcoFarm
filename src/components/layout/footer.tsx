@@ -13,19 +13,19 @@ export function Footer() {
             <Link
               href="/"
               className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-90"
-              aria-label="Agri-Aqua Network Home"
+              aria-label="EcoFarm Home"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-primary text-white shadow-sm">
                 <Sprout className="h-5 w-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 font-heading text-lg font-bold tracking-tight text-brand-primary">
-                  <span>Agri-Aqua</span>
+                <div className="flex items-center gap-1 font-heading text-lg font-bold tracking-tight text-brand-primary">
+                  <span>Eco</span>
                   <Waves className="h-4 w-4 text-brand-secondary" />
-                  <span className="text-on-surface">Network</span>
+                  <span className="text-on-surface">Farm</span>
                 </div>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-neutral/70">
-                  B2B Operating Platform
+                  Digital Agriculture Platform
                 </span>
               </div>
             </Link>
@@ -143,7 +143,7 @@ export function Footer() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 transition-colors hover:text-brand-primary hover:underline"
                 >
-                  <span>About Agri-Aqua</span>
+                  <span>About EcoFarm</span>
                   <ArrowUpRight className="h-3 w-3 opacity-60" />
                 </a>
               </li>
@@ -250,7 +250,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-surface-dim pt-8 sm:flex-row text-xs text-slate-neutral/70">
-          <p>© 2026 Agri-Aqua Network. All rights reserved.</p>
+          <p>© 2026 EcoFarm. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs">
             <Link href="/marketplace" className="hover:text-brand-primary transition-colors">
               Marketplace

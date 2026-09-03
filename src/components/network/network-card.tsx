@@ -107,7 +107,7 @@ export function NetworkCard({
                 {isVerified && <ShieldCheck className="h-4 w-4 text-status-success shrink-0" />}
               </div>
               <p className="text-xs text-slate-neutral truncate">
-                {headline || `${participantType} • ${businessCategory || "Agri-Aqua Network"}`}
+                {headline || `${participantType} • ${businessCategory || "EcoFarm Network"}`}
               </p>
             </div>
           </div>

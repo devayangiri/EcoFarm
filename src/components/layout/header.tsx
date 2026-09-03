@@ -105,21 +105,21 @@ export function Header({
           <Link
             href="/"
             className="flex items-center gap-2.5 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary rounded-md"
-            aria-label="Agri-Aqua Network Home"
+            aria-label="EcoFarm Home"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-primary text-white shadow-sm ring-1 ring-brand-primary/20">
               <Sprout className="h-5 w-5 text-white" />
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5 font-heading text-lg font-bold tracking-tight text-brand-primary leading-none">
-                <span>Agri-Aqua</span>
+              <div className="flex items-center gap-1 font-heading text-lg font-bold tracking-tight text-brand-primary leading-none">
+                <span>Eco</span>
                 <span className="flex items-center text-brand-secondary">
                   <Waves className="h-4 w-4" />
                 </span>
-                <span className="text-on-surface">Network</span>
+                <span className="text-on-surface">Farm</span>
               </div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-neutral/70 mt-0.5 leading-none">
-                B2B Operating Platform
+                Digital Agriculture Platform
               </span>
             </div>
           </Link>
@@ -284,7 +284,7 @@ export function Header({
                   size="sm"
                   className="font-semibold text-xs shadow-sm px-4 h-9 gap-1.5"
                 >
-                  <span>Join Network</span>
+                  <span>Join EcoFarm</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>

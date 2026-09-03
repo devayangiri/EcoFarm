@@ -15,6 +15,23 @@ export type ConnectionStatusType =
   | "PENDING_RECEIVED"
   | "NONE";
 
+function getRoleHeadline(role: string): string {
+  switch (role) {
+    case "FARMER":
+      return "Farmer on EcoFarm";
+    case "BUYER":
+      return "Buyer on EcoFarm";
+    case "SERVICE_PROVIDER":
+      return "Service Provider on EcoFarm";
+    case "AGENT":
+      return "Field Agent on EcoFarm";
+    case "ADMIN":
+      return "Administrator on EcoFarm";
+    default:
+      return "Member on EcoFarm";
+  }
+}
+
 export class NetworkService {
   /**
    * Search professional B2B directory with server-side filtering & pagination
@@ -252,7 +269,7 @@ export class NetworkService {
         data: {
           userId: user.id,
           displayName: user.fullName,
-          headline: `${user.role} Member at Agri-Aqua Network`,
+          headline: getRoleHeadline(user.role),
           participantType: user.role,
           sector: "AGRICULTURE",
           isVerified: user.status === "ACTIVE",
@@ -857,7 +874,7 @@ export class NetworkService {
         data: {
           userId: user.id,
           displayName: user.fullName,
-          headline: `${user.role} Member at Agri-Aqua Network`,
+          headline: getRoleHeadline(user.role),
           participantType: user.role,
           sector: "AGRICULTURE",
         },

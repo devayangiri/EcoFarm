@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Password Recovery | Agri-Aqua Network",
-  description: "Account recovery instructions for Agri-Aqua Network members.",
+  title: "Password Recovery | EcoFarm",
+  description: "Account recovery instructions for EcoFarm members.",
 };
 
 export default function ForgotPasswordPage() {

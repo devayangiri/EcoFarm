@@ -4,14 +4,14 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { RegisterForm } from "@/components/auth/register-form";
 
 export const metadata: Metadata = {
-  title: "Create Account | Agri-Aqua Network",
-  description: "Join the digital business network for agriculture and aquaculture.",
+  title: "Create Account | EcoFarm",
+  description: "Join EcoFarm - the digital platform for agriculture and aquaculture.",
 };
 
 export default function RegisterPage() {
   return (
     <AuthCard
-      title="Join the Network"
+      title="Join EcoFarm"
       subtitle="Connect directly with verified farmers, buyers, and service providers"
       footerContent={
         <p className="text-[11px] text-slate-neutral/80">

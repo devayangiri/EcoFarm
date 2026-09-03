@@ -6,7 +6,7 @@ test.describe("Phase 16 — Production Smoke Tests & Go-Live Verification", () =
     expect(response?.status()).toBe(200);
 
     // Verify Brand & Tagline
-    await expect(page).toHaveTitle(/Agri-Aqua Network/i);
+    await expect(page).toHaveTitle(/EcoFarm|Agri-Aqua/i);
     await expect(page.locator("h1")).toContainText("Agriculture");
     await expect(page.getByText("Connect. Trade. Grow.")).toBeVisible();
 

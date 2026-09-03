@@ -129,7 +129,7 @@ export function NetworkProfileView({ profile }: NetworkProfileViewProps) {
               </div>
 
               <p className="text-sm font-medium text-brand-secondary">
-                {profile.headline || `${profile.participantType} • ${profile.businessCategory || "Agri-Aqua Commercial Ecosystem"}`}
+                {profile.headline || `${profile.participantType} • ${profile.businessCategory || "EcoFarm Commercial Ecosystem"}`}
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-neutral">
@@ -221,7 +221,7 @@ export function NetworkProfileView({ profile }: NetworkProfileViewProps) {
           <Card className="border border-surface-dim bg-white shadow-sm p-6 space-y-3">
             <h2 className="font-heading text-base font-bold text-on-surface">About Organization & Operations</h2>
             <p className="text-sm text-slate-neutral leading-relaxed whitespace-pre-wrap">
-              {profile.bio || "This business participant has established their verified identity on Agri-Aqua Network."}
+              {profile.bio || "This business participant has established their verified identity on EcoFarm."}
             </p>
           </Card>
 

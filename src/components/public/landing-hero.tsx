@@ -37,7 +37,7 @@ export function LandingHero() {
           <div className="inline-flex items-center justify-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-surface-dim bg-white shadow-sm text-xs font-semibold text-brand-primary">
               <span className="flex h-2 w-2 rounded-full bg-status-success"></span>
-              <span>Agriculture + Aquaculture B2B Operating Platform</span>
+              <span>Agriculture + Aquaculture Digital Platform</span>
             </div>
           </div>
 
@@ -49,7 +49,7 @@ export function LandingHero() {
 
           {/* Supporting Statement */}
           <p className="font-body text-base sm:text-lg md:text-xl text-slate-neutral max-w-2xl mx-auto leading-relaxed">
-            A trusted digital business network connecting farmers, aquaculture producers, commercial buyers and service providers.
+            A trusted digital platform connecting farmers, aquaculture producers, commercial buyers and service providers.
           </p>
 
           {/* Primary Action Buttons */}
@@ -60,7 +60,7 @@ export function LandingHero() {
                 size="lg"
                 className="w-full sm:w-auto min-h-[48px] px-8 text-sm sm:text-base font-semibold shadow-md gap-2.5 rounded-lg"
               >
-                <span>Join the Network</span>
+                <span>Join EcoFarm</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

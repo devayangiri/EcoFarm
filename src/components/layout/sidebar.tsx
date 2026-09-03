@@ -140,7 +140,7 @@ export function Sidebar({ currentPath = "/", userRole = "FARMER" }: SidebarProps
       <div className="rounded-md border border-surface-dim bg-surface-bright p-3 space-y-2">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 rounded-full bg-status-success"></span>
-          <span className="text-xs font-semibold text-on-surface">Agri-Aqua v0.1.0</span>
+          <span className="text-xs font-semibold text-on-surface">EcoFarm v0.1.0</span>
         </div>
         <p className="text-[11px] text-slate-neutral">Phase 1 Foundation Active</p>
       </div>

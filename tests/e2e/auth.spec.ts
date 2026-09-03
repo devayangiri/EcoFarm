@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Agri-Aqua Authentication & RBAC E2E", () => {
   test("Guest can navigate to login page with Stitch design system", async ({ page }) => {
     await page.goto("/login");
-    await expect(page).toHaveTitle(/Sign In \| Agri-Aqua Network/i);
+    await expect(page).toHaveTitle(/Sign In \| EcoFarm/i);
     await expect(page.locator("h1")).toContainText("Welcome Back");
     await expect(page.getByPlaceholder(/farmer@agriaqua.dev/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /Sign In to Network/i })).toBeVisible();
@@ -11,8 +11,8 @@ test.describe("Agri-Aqua Authentication & RBAC E2E", () => {
 
   test("Guest can navigate to registration page and step through role selection", async ({ page }) => {
     await page.goto("/register");
-    await expect(page).toHaveTitle(/Create Account \| Agri-Aqua Network/i);
-    await expect(page.locator("h1")).toContainText("Join the Network");
+    await expect(page).toHaveTitle(/Create Account \| EcoFarm/i);
+    await expect(page.locator("h1")).toContainText(/Join EcoFarm|Join the Network/i);
     await expect(page.getByText("Account Info")).toBeVisible();
     await expect(page.getByText("Role Selection")).toBeVisible();
 

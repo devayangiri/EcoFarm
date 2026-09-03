@@ -53,7 +53,7 @@ export function ContextDetailsPanel({
 
         <div className="p-3 bg-surface-low rounded text-[11px] text-slate-neutral space-y-1">
           <span className="font-semibold text-on-surface block">High-Trust B2B Protocol</span>
-          <p>Messages exchanged here are verified and protected by the Agri-Aqua Network platform security.</p>
+          <p>Messages exchanged here are protected by EcoFarm platform security.</p>
         </div>
       </div>
     );

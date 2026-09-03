@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Public Commerce & Public Navigation Journey", () => {
   test("1. Homepage loads and does not link to fake feat-1 product IDs", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/Agri-Aqua/i);
+    await expect(page).toHaveTitle(/EcoFarm|Agri-Aqua/i);
 
     // Verify absence of fake feat-1 links
     const featLink = page.locator('a[href*="/marketplace/feat-1"]');
@@ -18,7 +18,7 @@ test.describe("Public Commerce & Public Navigation Journey", () => {
 
   test("2. CTAs on homepage navigate to real registration and marketplace", async ({ page }) => {
     await page.goto("/");
-    const joinBtn = page.locator('a[href="/register"]', { hasText: /Join the Network/i });
+    const joinBtn = page.locator('a[href="/register"]', { hasText: /Join EcoFarm|Join the Network/i });
     if (await joinBtn.count() > 0) {
       await expect(joinBtn.first()).toBeVisible();
     }

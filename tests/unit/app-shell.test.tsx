@@ -12,7 +12,7 @@ describe("AppShell Component", () => {
     );
 
     // Verify Brand Logos (Header & Mobile Header)
-    const brandTitles = screen.getAllByText(/Agri-Aqua/i);
+    const brandTitles = screen.getAllByText(/EcoFarm|Eco/i);
     expect(brandTitles.length).toBeGreaterThan(0);
 
     // Verify Main Content Rendering

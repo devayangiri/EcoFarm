@@ -635,11 +635,11 @@ export default async function HomePage() {
         <div className="relative max-w-stitch-container mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 max-w-3xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-brand-primary-container backdrop-blur-sm border border-white/15">
             <Sprout className="h-3.5 w-3.5" />
-            <span>Digital Business Operating Platform</span>
+            <span>EcoFarm Digital Agriculture Platform</span>
           </div>
 
           <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            Build your business in the Agri-Aqua ecosystem.
+            Build your business in the EcoFarm ecosystem.
           </h2>
 
           <p className="font-body text-sm sm:text-base text-white/80 max-w-2xl mx-auto leading-relaxed">
@@ -653,7 +653,7 @@ export default async function HomePage() {
                 size="lg"
                 className="w-full sm:w-auto min-h-[48px] px-8 text-sm sm:text-base font-bold bg-white text-brand-primary hover:bg-surface-low shadow-lg gap-2 rounded-lg"
               >
-                <span>Join the Network</span>
+                <span>Join EcoFarm</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

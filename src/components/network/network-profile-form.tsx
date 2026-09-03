@@ -118,7 +118,7 @@ export function NetworkProfileForm({ initialProfile }: NetworkProfileFormProps) 
                   { label: "Farmer / Producer", value: "FARMER" },
                   { label: "Commercial Buyer / Trader", value: "BUYER" },
                   { label: "Service Provider / Logistics", value: "SERVICE_PROVIDER" },
-                  { label: "Agri-Aqua Enterprise", value: "BUSINESS" },
+                  { label: "EcoFarm Enterprise", value: "BUSINESS" },
                   { label: "Cooperative / FPO", value: "ORGANIZATION" },
                 ]}
               />

@@ -28,9 +28,9 @@ export function AuthCard({
               <Sprout className="h-5 w-5 text-white" />
             </div>
             <div className="flex items-center gap-1 font-heading text-xl font-bold tracking-tight text-brand-primary">
-              <span>Agri-Aqua</span>
+              <span>Eco</span>
               <Waves className="h-4 w-4 text-brand-secondary" />
-              <span className="text-on-surface">Network</span>
+              <span className="text-on-surface">Farm</span>
             </div>
           </Link>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-on-surface pt-1">

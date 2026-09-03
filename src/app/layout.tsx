@@ -15,17 +15,33 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Agri-Aqua Network | Connect. Trade. Grow.",
+  title: "EcoFarm | Connect. Trade. Grow.",
   description:
-    "High-trust B2B digital business network and marketplace connecting the Agriculture and Aquaculture ecosystem.",
+    "EcoFarm is the high-trust digital platform and marketplace connecting farmers, aquaculture producers, commercial buyers, and service providers across India.",
   keywords: [
+    "EcoFarm",
     "Agriculture Marketplace",
     "Aquaculture Network",
-    "Farmer B2B",
+    "Farmer Platform",
     "Crop Trading",
-    "Seafood Trade",
+    "Fish Farming",
     "Farm Machinery",
   ],
+  openGraph: {
+    title: "EcoFarm | Connect. Trade. Grow.",
+    description:
+      "EcoFarm connects farmers, aquaculture producers, commercial buyers, and service providers into an integrated digital operating platform.",
+    url: "https://app.ayangiri.com",
+    siteName: "EcoFarm",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EcoFarm | Connect. Trade. Grow.",
+    description:
+      "High-trust digital platform and marketplace for agriculture and aquaculture.",
+  },
 };
 
 export default function RootLayout({

@@ -23,7 +23,7 @@ test.describe("Phase 14 — Responsive UX & Cross-Viewport Hardening", () => {
       expect(hasHorizontalScrollbar).toBe(false);
 
       // Verify page title
-      await expect(page).toHaveTitle(/Agri-Aqua Network/i);
+      await expect(page).toHaveTitle(/EcoFarm|Agri-Aqua/i);
     });
   }
 

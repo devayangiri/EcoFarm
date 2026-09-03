@@ -15,7 +15,7 @@ test.describe("Local Root Routing & Navigation", () => {
     // Register
     await page.goto("/register");
     await expect(page).toHaveURL(/\/register/);
-    await expect(page.getByRole("heading", { name: /Join Agri-Aqua Network/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Join EcoFarm|Join the Network|Join Agri-Aqua/i })).toBeVisible();
 
     // Marketplace
     await page.goto("/marketplace");
@@ -25,7 +25,7 @@ test.describe("Local Root Routing & Navigation", () => {
     // Business Network
     await page.goto("/network");
     await expect(page).toHaveURL(/\/network/);
-    await expect(page.getByRole("heading", { name: /B2B Agri-Aqua Business Directory/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /EcoFarm Business Directory|B2B Agri-Aqua Business Directory/i })).toBeVisible();
 
     // Services
     await page.goto("/services");

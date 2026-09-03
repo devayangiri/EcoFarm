@@ -74,19 +74,19 @@ export function MobileHeader({
         <Link
           href="/"
           className="flex items-center gap-2 min-h-[44px] py-1 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary rounded"
-          aria-label="Agri-Aqua Network Home"
+          aria-label="EcoFarm Home"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-primary text-white shadow-sm ring-1 ring-brand-primary/20">
             <Sprout className="h-4 w-4 text-white" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1 font-heading text-base font-bold text-brand-primary leading-none">
-              <span>Agri-Aqua</span>
+              <span>Eco</span>
               <Waves className="h-3.5 w-3.5 text-brand-secondary" />
-              <span className="text-on-surface">Network</span>
+              <span className="text-on-surface">Farm</span>
             </div>
             <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-neutral/70 mt-0.5 leading-none">
-              B2B Platform
+              Digital Agriculture Platform
             </span>
           </div>
         </Link>

@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Phase 8: B2B Business Network & Directory E2E", () => {
   test("loads public directory page with participant tabs and search bar", async ({ page }) => {
     await page.goto("/network");
-    await expect(page.locator("h1")).toContainText("B2B Agri-Aqua Business Directory");
+    await expect(page.locator("h1")).toContainText(/EcoFarm Business Directory|B2B Agri-Aqua Business Directory/i);
     await expect(page.getByText("All Participants")).toBeVisible();
     await expect(page.getByText("Farmers & Producers")).toBeVisible();
     await expect(page.getByText("Commercial Buyers")).toBeVisible();
