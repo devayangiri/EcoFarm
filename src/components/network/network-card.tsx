@@ -107,7 +107,9 @@ export function NetworkCard({
                 {isVerified && <ShieldCheck className="h-4 w-4 text-status-success shrink-0" />}
               </div>
               <p className="text-xs text-slate-neutral truncate">
-                {headline || `${participantType} • ${businessCategory || "EcoFarm Network"}`}
+                {(headline || `${participantType} • ${businessCategory || "EcoFarm Network"}`)
+                  .replace(/Member at Agri-Aqua Network/gi, "on EcoFarm")
+                  .replace(/Agri-Aqua Network/gi, "EcoFarm")}
               </p>
             </div>
           </div>

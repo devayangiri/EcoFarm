@@ -209,7 +209,9 @@ export function MyNetworkView({ initialNetwork }: MyNetworkViewProps) {
                     </Link>
 
                     <p className="text-xs text-slate-neutral line-clamp-1">
-                      {conn.headline || conn.businessCategory || "Active Network Member"}
+                      {(conn.headline || conn.businessCategory || "Active EcoFarm Member")
+                        .replace(/Member at Agri-Aqua Network/gi, "on EcoFarm")
+                        .replace(/Agri-Aqua Network/gi, "EcoFarm")}
                     </p>
                   </div>
 

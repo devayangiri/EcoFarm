@@ -129,7 +129,9 @@ export function NetworkProfileView({ profile }: NetworkProfileViewProps) {
               </div>
 
               <p className="text-sm font-medium text-brand-secondary">
-                {profile.headline || `${profile.participantType} • ${profile.businessCategory || "EcoFarm Commercial Ecosystem"}`}
+                {(profile.headline || `${profile.participantType} • ${profile.businessCategory || "EcoFarm Commercial Ecosystem"}`)
+                  .replace(/Member at Agri-Aqua Network/gi, "on EcoFarm")
+                  .replace(/Agri-Aqua Network/gi, "EcoFarm")}
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-neutral">
