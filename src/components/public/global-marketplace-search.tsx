@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Sparkles } from "lucide-react";
+import { Search, ArrowRight, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const SEARCH_SUGGESTIONS = [
@@ -11,8 +11,8 @@ const SEARCH_SUGGESTIONS = [
   { label: "Rohu Fish", query: "Rohu Fish" },
   { label: "Seeds", query: "Seeds" },
   { label: "Fertilizer", query: "Fertilizer" },
-  { label: "Tractor", query: "Tractor", href: "/services?search=Tractor" },
-  { label: "Cold Storage", query: "Cold Storage", href: "/services?search=Cold%20Storage" },
+  { label: "Tractor", query: "Tractor" },
+  { label: "Cold Storage", query: "Cold Storage" },
 ];
 
 export function GlobalMarketplaceSearch() {
@@ -22,30 +22,26 @@ export function GlobalMarketplaceSearch() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchTerm.trim();
-    if (!query) {
-      router.push("/marketplace");
-      return;
-    }
-    // Check if query refers to machinery/storage services
-    if (/tractor|machinery|cold storage|harvester/i.test(query)) {
-      router.push(`/services?search=${encodeURIComponent(query)}`);
-    } else {
+    if (query) {
       router.push(`/marketplace?search=${encodeURIComponent(query)}`);
+    } else {
+      router.push("/marketplace");
     }
   };
 
-  const handleChipClick = (item: { label: string; query: string; href?: string }) => {
-    if (item.href) {
-      router.push(item.href);
-    } else {
-      router.push(`/marketplace?search=${encodeURIComponent(item.query)}`);
-    }
+  const handleChipClick = (query: string) => {
+    setSearchTerm(query);
+    router.push(`/marketplace?search=${encodeURIComponent(query)}`);
+  };
+
+  const handleClear = () => {
+    setSearchTerm("");
   };
 
   return (
     <section className="relative -mt-6 z-20 max-w-stitch-container mx-auto px-4 sm:px-6 lg:px-8">
       <div className="bg-white rounded-2xl shadow-xl border border-surface-dim p-4 sm:p-6 lg:p-7">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} role="search" className="space-y-4">
           <div className="flex flex-col md:flex-row items-center gap-3">
             {/* Input Field with Icon */}
             <div className="relative flex-1 w-full">
@@ -54,12 +50,23 @@ export function GlobalMarketplaceSearch() {
               </div>
               <input
                 type="text"
+                name="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search products, seeds, fish, machinery, services..."
-                className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-xl border border-surface-dim bg-surface-low text-on-surface text-sm sm:text-base placeholder:text-slate-neutral/70 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all shadow-inner"
-                aria-label="Search EcoFarm marketplace catalog"
+                placeholder="Search commodities..."
+                className="w-full pl-12 pr-10 py-3.5 sm:py-4 rounded-xl border border-surface-dim bg-surface-low text-on-surface text-sm sm:text-base placeholder:text-slate-neutral/70 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all shadow-inner"
+                aria-label="Search commodities"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  aria-label="Clear search input"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-neutral hover:text-on-surface transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             {/* Search Submit Button */}
@@ -85,7 +92,7 @@ export function GlobalMarketplaceSearch() {
                 <button
                   key={chip.label}
                   type="button"
-                  onClick={() => handleChipClick(chip)}
+                  onClick={() => handleChipClick(chip.query)}
                   className="px-2.5 py-1 rounded-lg border border-surface-dim bg-surface hover:bg-brand-primary/10 hover:border-brand-primary/30 hover:text-brand-primary text-slate-neutral text-xs font-medium transition-colors"
                 >
                   {chip.label}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/cards/product-card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,12 @@ export function MarketplaceBrowser({
   const searchParams = useSearchParams();
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+
+  // Sync state when URL query param changes from external navigation (e.g. Header search)
+  useEffect(() => {
+    setSearchQuery(searchParams.get("search") || "");
+  }, [searchParams]);
+
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [savedStatusMap, setSavedStatusMap] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};

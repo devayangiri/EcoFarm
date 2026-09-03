@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sprout,
   Waves,
   Search,
+  X,
   Bell,
   MessageSquare,
   LogOut,
@@ -34,9 +35,39 @@ export function Header({
   currentPath,
 }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const activePath = currentPath || pathname || "/";
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [headerSearch, setHeaderSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Global shortcut (⌘K or Ctrl+K) to focus the header search bar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = headerSearch.trim();
+    if (query) {
+      router.push(`/marketplace?search=${encodeURIComponent(query)}`);
+    } else {
+      router.push("/marketplace");
+    }
+  };
+
+  const handleClearSearch = () => {
+    setHeaderSearch("");
+    searchInputRef.current?.focus();
+  };
 
   const isAuthenticated =
     Boolean(userRole) &&
@@ -156,20 +187,44 @@ export function Header({
 
         {/* Right Actions */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Quick Search Trigger */}
-          <Link
-            href="/marketplace"
-            className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-lg border border-surface-dim bg-surface-low/60 text-xs text-slate-neutral hover:text-brand-primary hover:bg-surface-low hover:border-brand-secondary/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
-            aria-label="Search Marketplace Catalog"
+          {/* Real Global Search Bar (Desktop) */}
+          <form
+            onSubmit={handleSearchSubmit}
+            role="search"
+            className="hidden sm:flex items-center relative h-9 w-48 md:w-56 lg:w-72 rounded-lg border border-surface-dim bg-surface-low/70 text-xs text-slate-neutral hover:border-brand-secondary/40 focus-within:bg-white focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all shadow-xs"
           >
-            <Search className="h-3.5 w-3.5 text-slate-neutral" />
-            <span className="hidden lg:inline text-slate-neutral/70">
-              Search commodities & services...
-            </span>
-            <kbd className="hidden lg:inline-flex h-4 items-center rounded border border-surface-dim bg-white px-1 text-[9px] font-mono text-slate-neutral/60">
-              ⌘K
-            </kbd>
-          </Link>
+            <button
+              type="submit"
+              className="flex items-center justify-center pl-2.5 pr-1 text-slate-neutral hover:text-brand-primary transition-colors focus:outline-none"
+              aria-label="Submit search"
+            >
+              <Search className="h-3.5 w-3.5" />
+            </button>
+            <input
+              ref={searchInputRef}
+              type="text"
+              name="search"
+              value={headerSearch}
+              onChange={(e) => setHeaderSearch(e.target.value)}
+              placeholder="Search commodities..."
+              aria-label="Search commodities"
+              className="w-full bg-transparent text-xs text-on-surface placeholder:text-slate-neutral/70 focus:outline-none pr-1"
+            />
+            {headerSearch ? (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                aria-label="Clear search text"
+                className="pr-2.5 text-slate-neutral/60 hover:text-on-surface transition-colors focus:outline-none"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <kbd className="hidden lg:inline-flex h-4 mr-2 items-center rounded border border-surface-dim bg-white px-1 text-[9px] font-mono text-slate-neutral/60 pointer-events-none select-none">
+                ⌘K
+              </kbd>
+            )}
+          </form>
 
           {isAuthenticated ? (
             <div className="flex items-center gap-2 sm:gap-3">
