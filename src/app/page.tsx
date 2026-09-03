@@ -639,7 +639,7 @@ export default async function HomePage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full sm:w-auto min-h-[48px] px-8 text-sm sm:text-base font-bold text-white border-white/40 hover:bg-white/10 hover:border-white rounded-lg"
+                className="w-full sm:w-auto min-h-[48px] px-8 text-sm sm:text-base font-bold !bg-transparent !text-white border-2 !border-white/80 hover:!bg-white/15 hover:!border-white rounded-lg transition-colors"
               >
                 Explore Marketplace
               </Button>
