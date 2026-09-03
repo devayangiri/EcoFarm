@@ -23,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { LandingHero } from "@/components/public/landing-hero";
+import { GlobalMarketplaceSearch } from "@/components/public/global-marketplace-search";
+import { CategoryDiscovery } from "@/components/public/category-discovery";
+import { DualSectorShowcase } from "@/components/public/dual-sector-showcase";
 import { ProductCard } from "@/components/cards/product-card";
 import { NetworkCard } from "@/components/network/network-card";
 import { ServiceCard } from "@/components/services/service-card";
@@ -80,6 +83,11 @@ export default async function HomePage() {
   } catch (err) {
     console.error("[Homepage] Services query:", err);
   }
+
+  // Filter out any dev/test/demo accounts from public homepage previews (Phase 0 & Phase 8)
+  const genuineProfiles = networkProfiles.filter(
+    (p) => !/test|demo|e2e|ayan/i.test((p.displayName || "") + " " + (p.headline || ""))
+  );
 
   // Capability Pillars (Truthful description of current platform capabilities)
   const capabilityPillars = [
@@ -214,52 +222,14 @@ export default async function HomePage() {
       {/* SECTION 1: HERO */}
       <LandingHero />
 
-      {/* SECTION 2: TRUST & PLATFORM CAPABILITIES */}
-      <section className="py-12 sm:py-16 bg-white border-b border-surface-dim">
-        <div className="mx-auto max-w-stitch-container px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-surface-dim bg-surface-low text-xs font-semibold text-brand-primary">
-              <Layers className="h-3.5 w-3.5" />
-              <span>Platform Architecture</span>
-            </div>
-            <h2 className="font-heading text-2xl sm:text-3xl font-extrabold text-on-surface">
-              Core Platform Capabilities
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-neutral font-body">
-              Built specifically to support high-trust, multi-district agricultural and aquacultural business operations.
-            </p>
-          </div>
+      {/* SECTION 2: WORKING GLOBAL SEARCH */}
+      <GlobalMarketplaceSearch />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {capabilityPillars.map((pillar) => {
-              const Icon = pillar.icon;
-              return (
-                <div
-                  key={pillar.title}
-                  className="rounded-xl border border-surface-dim bg-surface-low/50 p-5 space-y-3 transition-all hover:bg-white hover:shadow-stitch-card hover:border-brand-secondary/30 flex flex-col justify-between"
-                >
-                  <div className="space-y-2.5">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${pillar.bg} ${pillar.color}`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="font-heading font-bold text-base text-on-surface">
-                      {pillar.title}
-                    </h3>
-                    <p className="text-xs text-slate-neutral leading-relaxed">
-                      {pillar.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* SECTION 3: CATEGORY DISCOVERY */}
+      <CategoryDiscovery />
 
-      {/* SECTION 3: FEATURED MARKETPLACE */}
-      <section className="py-12 sm:py-16 bg-surface border-b border-surface-dim">
+      {/* SECTION 4: FEATURED MARKETPLACE */}
+      <section className="py-14 sm:py-18 bg-white border-b border-surface-dim">
         <div className="mx-auto max-w-stitch-container px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-1">
@@ -336,8 +306,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* SECTION 4: BUSINESS NETWORK */}
-      <section className="py-12 sm:py-16 bg-white border-b border-surface-dim">
+      {/* SECTION 5: AGRICULTURE + AQUACULTURE SHOWCASE */}
+      <DualSectorShowcase />
+
+      {/* SECTION 6: BUSINESS NETWORK */}
+      <section className="py-14 sm:py-18 bg-white border-b border-surface-dim">
         <div className="mx-auto max-w-stitch-container px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-1">
@@ -349,7 +322,7 @@ export default async function HomePage() {
                 Business Network
               </h2>
               <p className="text-xs sm:text-sm text-slate-neutral">
-                Connect with verified agricultural enterprises, buyers, and aquaculture operations.
+                Connect with verified agricultural enterprises, commercial buyers, and aquaculture operations.
               </p>
             </div>
             <Link
@@ -361,9 +334,9 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {networkProfiles.length > 0 ? (
+          {genuineProfiles.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {networkProfiles.map((item) => (
+              {genuineProfiles.map((item) => (
                 <NetworkCard
                   key={item.id}
                   id={item.id}
@@ -391,7 +364,7 @@ export default async function HomePage() {
               </div>
               <div className="space-y-1 max-w-md mx-auto">
                 <h3 className="font-heading font-bold text-base text-on-surface">
-                  Build the Network
+                  Verified Business Network
                 </h3>
                 <p className="text-xs text-slate-neutral leading-relaxed">
                   Join India&apos;s digital network for agriculture and aquaculture businesses. Showcase your operations and expand trading partnerships.
@@ -414,7 +387,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* SECTION 5: SERVICES */}
+      {/* SECTION 7: SERVICES & LOGISTICS */}
       <section className="py-12 sm:py-16 bg-surface border-b border-surface-dim">
         <div className="mx-auto max-w-stitch-container px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">

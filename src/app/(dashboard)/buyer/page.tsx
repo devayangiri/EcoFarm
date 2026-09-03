@@ -48,11 +48,16 @@ export default async function BuyerDashboardPage() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-stitch-container mx-auto space-y-8 font-body">
         {/* Page Header */}
         <PageHeader
-          title="Buyer Dashboard"
-          description="Discover suppliers, manage requirements and grow your business network."
+          title="Buyer Procurement Hub"
+          description="Discover verified farm-gate harvests, post procurement RFQs, and coordinate bulk wholesale trade."
           badge={<Badge variant="secondary">Commercial Buyer</Badge>}
           actions={
             <div className="flex items-center gap-2.5">
+              <Link href="/buyer/requirements">
+                <Button variant="outline" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                  Post RFQ
+                </Button>
+              </Link>
               <Link href="/buyer/marketplace">
                 <Button variant="primary" size="sm" leftIcon={<Search className="h-4 w-4" />}>
                   Explore Catalog
@@ -61,6 +66,77 @@ export default async function BuyerDashboardPage() {
             </div>
           }
         />
+
+        {/* B2B Marketplace Search & Category Quick Discovery */}
+        <div className="rounded-2xl border border-surface-dim bg-white p-4 sm:p-5 shadow-sm space-y-4">
+          <form action="/buyer/marketplace" method="GET" className="relative flex items-center">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-neutral">
+              <Search className="h-4 w-4 text-brand-primary" />
+            </div>
+            <input
+              type="text"
+              name="search"
+              placeholder="Search products, seeds, fish, machinery..."
+              className="w-full pl-10 pr-24 py-2.5 sm:py-3 rounded-xl border border-surface-dim bg-surface-low text-on-surface text-xs sm:text-sm placeholder:text-slate-neutral focus:outline-none focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all shadow-inner"
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              className="absolute right-1.5 h-8 px-4 text-xs font-semibold rounded-lg"
+            >
+              Search
+            </Button>
+          </form>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs scrollbar-none">
+            <span className="font-semibold text-on-surface shrink-0 text-[11px] uppercase tracking-wider">
+              Quick Filter:
+            </span>
+            <Link
+              href="/buyer/marketplace"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-primary/10 hover:text-brand-primary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              All Lots
+            </Link>
+            <Link
+              href="/buyer/marketplace?category=GRAINS"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-primary/10 hover:text-brand-primary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              Grains & Paddy
+            </Link>
+            <Link
+              href="/buyer/marketplace?category=VEGETABLES"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-primary/10 hover:text-brand-primary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              Vegetables
+            </Link>
+            <Link
+              href="/buyer/marketplace?category=FRUITS"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-primary/10 hover:text-brand-primary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              Fruits
+            </Link>
+            <Link
+              href="/buyer/marketplace?sector=AQUACULTURE"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-secondary/10 hover:text-brand-secondary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              Fish & Aquaculture
+            </Link>
+            <Link
+              href="/buyer/marketplace?category=SEEDS"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-primary/10 hover:text-brand-primary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              Certified Seeds
+            </Link>
+            <Link
+              href="/buyer/services?category=MACHINERY_RENTAL"
+              className="px-2.5 py-1 rounded-md bg-surface-low hover:bg-brand-primary/10 hover:text-brand-primary text-slate-neutral font-medium transition-colors shrink-0"
+            >
+              Machinery & Logistics
+            </Link>
+          </div>
+        </div>
 
         {/* Real KPI Metrics */}
         <StatGrid columns={4}>
@@ -170,6 +246,7 @@ export default async function BuyerDashboardPage() {
                   locationDistrict={p.locationDistrict}
                   locationState={p.locationState}
                   imageUrl={p.imageUrl}
+                  isBuyerPortal={true}
                 />
               ))}
             </div>

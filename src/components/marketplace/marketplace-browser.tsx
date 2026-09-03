@@ -273,6 +273,7 @@ export function MarketplaceBrowser({
                   locationState={prod.locationState}
                   imageUrl={prod.imageUrl}
                   isSaved={savedStatusMap[prod.id]}
+                  isBuyerPortal={isBuyerPortal}
                   onToggleSave={() => handleToggleSave(prod.id)}
                 />
               </div>
