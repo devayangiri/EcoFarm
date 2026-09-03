@@ -89,6 +89,10 @@ export default async function HomePage() {
     (p) => !/test|demo|e2e|ayan/i.test((p.displayName || "") + " " + (p.headline || ""))
   );
 
+  const genuineServices = serviceListings.filter(
+    (s) => !/test|demo|e2e|ayan/i.test((s.title || "") + " " + (s.description || "") + " " + (s.provider?.businessName || ""))
+  );
+
   // Capability Pillars (Truthful description of current platform capabilities)
   const capabilityPillars = [
     {
@@ -412,9 +416,9 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {serviceListings.length > 0 ? (
+          {genuineServices.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {serviceListings.map((s) => (
+              {genuineServices.map((s) => (
                 <ServiceCard
                   key={s.id}
                   id={s.id}
