@@ -42,6 +42,19 @@ export function Header({
   const [headerSearch, setHeaderSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Sync headerSearch with URL query parameter
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const search = params.get("search");
+      if (search) {
+        setHeaderSearch(search);
+      } else if (!pathname?.startsWith("/marketplace")) {
+        setHeaderSearch("");
+      }
+    }
+  }, [pathname]);
+
   // Global shortcut (⌘K or Ctrl+K) to focus the header search bar
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
