@@ -225,6 +225,7 @@ export class AuthService {
       phone: user.phone,
       role: user.role as UserRole,
       status: user.status as UserSession["status"],
+      // Preserve exact database tokenVersion (default 0) without coercion to avoid SSR rejection
       tokenVersion: typeof user.tokenVersion === "number" ? user.tokenVersion : 0,
     };
 
