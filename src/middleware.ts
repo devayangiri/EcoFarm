@@ -119,32 +119,25 @@ export async function middleware(request: NextRequest) {
 
   // 5. Handle auth pages (/login, /register, /role-select)
   if (pathname === "/login" || pathname === "/register" || pathname === "/role-select") {
-    if (isAuthenticated) {
-      const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
-      const userRole = sessionPayload.role;
+    const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
 
-      // Check if callbackUrl is a valid relative internal path and authorized for this role
-      if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
-        const isAllowedCallback =
-          (callbackUrl.startsWith("/farmer") && (userRole === "FARMER" || userRole === "ADMIN")) ||
-          (callbackUrl.startsWith("/buyer") && (userRole === "BUYER" || userRole === "ADMIN")) ||
-          (callbackUrl.startsWith("/agent") && (userRole === "AGENT" || userRole === "ADMIN")) ||
-          (callbackUrl.startsWith("/provider") && (userRole === "SERVICE_PROVIDER" || userRole === "ADMIN")) ||
-          (callbackUrl.startsWith("/admin") && userRole === "ADMIN") ||
-          (!callbackUrl.startsWith("/farmer") &&
-           !callbackUrl.startsWith("/buyer") &&
-           !callbackUrl.startsWith("/agent") &&
-           !callbackUrl.startsWith("/provider") &&
-           !callbackUrl.startsWith("/admin"));
-
-        if (isAllowedCallback) {
-          return withResponseHeaders(NextResponse.redirect(new URL(callbackUrl, request.url)));
-        }
+    // If the request includes a callbackUrl, the user was directed to /login to authenticate.
+    // NEVER automatically bounce back to callbackUrl from /login or /register, as this causes
+    // an immediate circular redirect loop if the destination route rejected the current session.
+    if (callbackUrl) {
+      const response = NextResponse.next({ request: { headers: requestHeaders } });
+      if (request.cookies.has(SESSION_COOKIE_NAME)) {
+        response.cookies.delete(SESSION_COOKIE_NAME);
       }
+      return withResponseHeaders(response);
+    }
 
-      // Default redirect to the role's authorized dashboard
-      const targetDashboard = getRoleDashboardPath(userRole);
-      return withResponseHeaders(NextResponse.redirect(new URL(targetDashboard, request.url)));
+    if (isAuthenticated) {
+      // User directly visited /login without callbackUrl and is already authenticated -> redirect to role dashboard
+      const targetDashboard = getRoleDashboardPath(sessionPayload.role);
+      if (targetDashboard && targetDashboard !== pathname && !targetDashboard.startsWith("/login")) {
+        return withResponseHeaders(NextResponse.redirect(new URL(targetDashboard, request.url)));
+      }
     }
 
     // If unauthenticated but an invalid/expired/tampered session cookie is present, clear it cleanly

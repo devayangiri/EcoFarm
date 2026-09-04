@@ -149,9 +149,9 @@ export async function getCurrentUser(): Promise<UserSession | null> {
     const session = await verifySessionToken(token);
     if (!session) return null;
 
-    // Check account status directly against database
+    // Check account status directly against database with a 2500ms timeout guard
     try {
-      const user = await prisma.user.findUnique({
+      const dbLookup = prisma.user.findUnique({
         where: { id: session.userId },
         select: {
           id: true,
@@ -163,6 +163,12 @@ export async function getCurrentUser(): Promise<UserSession | null> {
           tokenVersion: true,
         },
       });
+
+      const timeoutGuard = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error("Database user lookup timeout")), 2500)
+      );
+
+      const user = await Promise.race([dbLookup, timeoutGuard]);
 
       if (
         !user ||
@@ -182,7 +188,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
         tokenVersion: user.tokenVersion,
       };
     } catch {
-      // If database is offline in local preview, fall back to cryptographically verified JWT
+      // If database lookup times out or fails, fall back to cryptographically verified JWT
       return {
         userId: session.userId,
         email: session.email,

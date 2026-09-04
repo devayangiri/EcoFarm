@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getRoleDashboardPath, hasRole } from "@/lib/rbac";
 import { registerSchema, publicRoleSchema } from "@/lib/validators/auth.schema";
@@ -153,6 +154,63 @@ describe("Auth & Routing Regression Tests", () => {
       expect(loginResult.user.email).toBe(loginEmail);
       expect(loginResult.user.role).toBe("BUYER");
       expect(loginResult.redirectUrl).toBe("/buyer");
+    });
+  });
+
+  describe("4. Middleware CallbackUrl Loop Prevention", () => {
+    it("should NOT bounce back to callbackUrl when visiting /login with callbackUrl", async () => {
+      const { middleware } = await import("@/middleware");
+      const { NextRequest } = await import("next/server");
+      const { createSessionToken, SESSION_COOKIE_NAME } = await import("@/lib/auth");
+
+      const token = await createSessionToken({
+        userId: "test-user-id",
+        email: "test@ayangiri.test",
+        fullName: "Test User",
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 1,
+      });
+
+      const request = new NextRequest("https://app.ayangiri.com/login?callbackUrl=/agent", {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        },
+      });
+
+      const response = await middleware(request);
+
+      // Must NOT redirect (status should not be 307/308/302)
+      expect(response.status).toBe(200);
+      // Must delete or clear the stale session cookie on response
+      const setCookie = response.headers.get("set-cookie") || "";
+      expect(setCookie).toContain(SESSION_COOKIE_NAME);
+    });
+
+    it("should redirect to role dashboard when visiting /login directly without callbackUrl if authenticated", async () => {
+      const { middleware } = await import("@/middleware");
+      const { NextRequest } = await import("next/server");
+      const { createSessionToken, SESSION_COOKIE_NAME } = await import("@/lib/auth");
+
+      const token = await createSessionToken({
+        userId: "test-user-id",
+        email: "test@ayangiri.test",
+        fullName: "Test User",
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 1,
+      });
+
+      const request = new NextRequest("https://app.ayangiri.com/login", {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        },
+      });
+
+      const response = await middleware(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe("https://app.ayangiri.com/agent");
     });
   });
 });
