@@ -16,6 +16,10 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(),
+}));
+
 describe("Auth & Routing Regression Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -155,9 +159,109 @@ describe("Auth & Routing Regression Tests", () => {
       expect(loginResult.user.role).toBe("BUYER");
       expect(loginResult.redirectUrl).toBe("/buyer");
     });
+
+    it("should preserve tokenVersion: 0 (default DB value) on login without coercing to 1", async () => {
+      const loginEmail = "agent@agriaqua.local";
+      const password = "LoginPassword123!";
+      const { hashPassword, verifySessionToken } = await import("@/lib/auth");
+      const passwordHash = await hashPassword(password);
+
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        id: "usr-agent-789",
+        fullName: "Login Agent",
+        email: loginEmail,
+        phone: null,
+        passwordHash,
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 0,
+        createdAt: new Date(),
+      } as any);
+      vi.mocked(prisma.user.update).mockResolvedValue({} as any);
+
+      const loginResult = await AuthService.login({
+        identifier: loginEmail,
+        password: password,
+      });
+
+      expect(loginResult).toBeDefined();
+
+      const decoded = await verifySessionToken(loginResult.token);
+      expect(decoded?.tokenVersion).toBe(0);
+    });
   });
 
-  describe("4. Middleware CallbackUrl Loop Prevention", () => {
+  describe("4. Session Validation (getCurrentUser)", () => {
+    it("should accept session when tokenVersion is 0 matching DB", async () => {
+      const { getCurrentUser } = await import("@/lib/rbac");
+      const { createSessionToken, SESSION_COOKIE_NAME } = await import("@/lib/auth");
+      const { cookies } = await import("next/headers");
+
+      const token = await createSessionToken({
+        userId: "agent-001",
+        email: "agent@agriaqua.local",
+        fullName: "Agent Field",
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 0,
+      });
+
+      vi.mocked(cookies).mockReturnValue({
+        get: vi.fn().mockReturnValue({ value: token }),
+      } as any);
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: "agent-001",
+        email: "agent@agriaqua.local",
+        fullName: "Agent Field",
+        phone: null,
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 0,
+      } as any);
+
+      const session = await getCurrentUser();
+      expect(session).toBeDefined();
+      expect(session?.userId).toBe("agent-001");
+      expect(session?.tokenVersion).toBe(0);
+    });
+
+    it("should invalidate session when user.tokenVersion in DB is greater than session.tokenVersion", async () => {
+      const { getCurrentUser } = await import("@/lib/rbac");
+      const { createSessionToken } = await import("@/lib/auth");
+      const { cookies } = await import("next/headers");
+
+      // Old token issued at tokenVersion: 0
+      const token = await createSessionToken({
+        userId: "agent-001",
+        email: "agent@agriaqua.local",
+        fullName: "Agent Field",
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 0,
+      });
+
+      vi.mocked(cookies).mockReturnValue({
+        get: vi.fn().mockReturnValue({ value: token }),
+      } as any);
+
+      // DB bumped to tokenVersion: 1 (e.g. by admin)
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: "agent-001",
+        email: "agent@agriaqua.local",
+        fullName: "Agent Field",
+        phone: null,
+        role: "AGENT",
+        status: "ACTIVE",
+        tokenVersion: 1,
+      } as any);
+
+      const session = await getCurrentUser();
+      expect(session).toBeNull();
+    });
+  });
+
+  describe("5. Middleware CallbackUrl Loop Prevention", () => {
     it("should NOT bounce back to callbackUrl when visiting /login with callbackUrl", async () => {
       const { middleware } = await import("@/middleware");
       const { NextRequest } = await import("next/server");

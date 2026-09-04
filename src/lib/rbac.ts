@@ -170,10 +170,16 @@ export async function getCurrentUser(): Promise<UserSession | null> {
 
       const user = await Promise.race([dbLookup, timeoutGuard]);
 
+      // Token is invalidated if the database record was bumped by an admin (user.tokenVersion > session.tokenVersion)
+      const isTokenVersionRevoked =
+        typeof user?.tokenVersion === "number" &&
+        typeof session?.tokenVersion === "number" &&
+        user.tokenVersion > session.tokenVersion;
+
       if (
         !user ||
         user.status === "SUSPENDED" ||
-        (session.tokenVersion > 0 && user.tokenVersion !== session.tokenVersion)
+        isTokenVersionRevoked
       ) {
         return null;
       }
@@ -196,7 +202,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
         phone: (session as any).phone || null,
         role: session.role as UserRole,
         status: ((session as any).status as UserSession["status"]) || "ACTIVE",
-        tokenVersion: (session as any).tokenVersion || 1,
+        tokenVersion: typeof (session as any).tokenVersion === "number" ? (session as any).tokenVersion : 0,
       };
     }
   } catch {

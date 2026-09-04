@@ -122,7 +122,7 @@ export class AuthService {
         passwordHash,
         role: input.role as UserRole,
         status: "PENDING_VERIFICATION",
-        tokenVersion: 1,
+        tokenVersion: 0,
         createdAt: new Date(),
         lastLoginAt: null,
       };
@@ -225,7 +225,7 @@ export class AuthService {
       phone: user.phone,
       role: user.role as UserRole,
       status: user.status as UserSession["status"],
-      tokenVersion: user.tokenVersion || 1,
+      tokenVersion: typeof user.tokenVersion === "number" ? user.tokenVersion : 0,
     };
 
     const token = await createSessionToken(sessionData);
