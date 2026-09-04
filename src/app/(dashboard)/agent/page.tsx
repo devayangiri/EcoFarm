@@ -39,9 +39,16 @@ export default async function AgentDashboardPage() {
   };
 
   try {
-    const fetched = await AgentService.getAgentDashboard(session.userId);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Agent dashboard query timeout")), 3000)
+    );
+    const fetched = await Promise.race([
+      AgentService.getAgentDashboard(session.userId),
+      timeoutPromise,
+    ]) as any;
+
     if (fetched && fetched.profile) {
-      data = fetched as any;
+      data = fetched;
     }
   } catch (err) {
     console.warn("Agent dashboard database query fallback:", err instanceof Error ? err.message : err);
@@ -51,11 +58,11 @@ export default async function AgentDashboardPage() {
     <AppShell
       showSidebar
       currentPath="/agent"
-      userRole={session.role}
-      userName={session.fullName}
+      userRole={session.role || "AGENT"}
+      userName={session.fullName || "Field Agent"}
     >
       <div className="p-4 sm:p-6 lg:p-8 max-w-stitch-container mx-auto space-y-6 text-left font-body">
-        <AgentDashboardView data={data as any} />
+        <AgentDashboardView data={data} />
       </div>
     </AppShell>
   );

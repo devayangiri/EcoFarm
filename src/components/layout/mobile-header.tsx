@@ -35,11 +35,11 @@ export function MobileHeader({
 
   const isAuthenticated =
     Boolean(userRole) &&
-    userRole.toUpperCase() !== "GUEST" &&
-    userRole.toLowerCase() !== "welcome";
+    (userRole || "").toUpperCase() !== "GUEST" &&
+    (userRole || "").toLowerCase() !== "welcome";
 
   const getDashboardHref = (role: string) => {
-    switch (role.toUpperCase()) {
+    switch ((role || "").toUpperCase()) {
       case "FARMER":
         return "/farmer";
       case "BUYER":

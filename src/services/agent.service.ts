@@ -92,67 +92,43 @@ export class AgentService {
     let recentLeads: any[] = [];
     let recentVerifications: any[] = [];
 
-    try {
-      assignedFarmersCount = await prisma.agentAssignment.count({
+    const results = await Promise.allSettled([
+      prisma.agentAssignment.count({
         where: { agentProfileId: profile.id, targetType: "FARMER", status: "ACTIVE" },
-      });
-    } catch {}
-
-    try {
-      assignedBuyersCount = await prisma.agentAssignment.count({
+      }),
+      prisma.agentAssignment.count({
         where: { agentProfileId: profile.id, targetType: "BUYER", status: "ACTIVE" },
-      });
-    } catch {}
-
-    try {
-      assignedBusinessesCount = await prisma.agentAssignment.count({
+      }),
+      prisma.agentAssignment.count({
         where: { agentProfileId: profile.id, targetType: "BUSINESS", status: "ACTIVE" },
-      });
-    } catch {}
-
-    try {
-      openLeadsCount = await prisma.agentLead.count({
+      }),
+      prisma.agentLead.count({
         where: { agentProfileId: profile.id, stage: { notIn: ["CONVERTED", "LOST"] } },
-      });
-    } catch {}
-
-    try {
-      tasksDueCount = await prisma.agentTask.count({
+      }),
+      prisma.agentTask.count({
         where: {
           agentProfileId: profile.id,
           status: { in: ["TODO", "IN_PROGRESS"] },
           dueDate: { lte: todayEnd },
         },
-      });
-    } catch {}
-
-    try {
-      pendingVerificationsCount = await prisma.verificationRequest.count({
+      }),
+      prisma.verificationRequest.count({
         where: {
           OR: [{ reviewerId: userId }, { status: "PENDING" }],
           status: { in: ["PENDING", "UNDER_REVIEW"] },
         },
-      });
-    } catch {}
-
-    try {
-      recentTasks = await prisma.agentTask.findMany({
+      }),
+      prisma.agentTask.findMany({
         where: { agentProfileId: profile.id, status: { not: "COMPLETED" } },
         orderBy: { dueDate: "asc" },
         take: 5,
-      });
-    } catch {}
-
-    try {
-      recentLeads = await prisma.agentLead.findMany({
+      }),
+      prisma.agentLead.findMany({
         where: { agentProfileId: profile.id },
         orderBy: { updatedAt: "desc" },
         take: 5,
-      });
-    } catch {}
-
-    try {
-      recentVerifications = await prisma.verificationRequest.findMany({
+      }),
+      prisma.verificationRequest.findMany({
         where: {
           OR: [{ reviewerId: userId }, { status: "PENDING" }],
           status: { in: ["PENDING", "UNDER_REVIEW"] },
@@ -163,8 +139,18 @@ export class AgentService {
         },
         orderBy: { submittedAt: "desc" },
         take: 5,
-      });
-    } catch {}
+      }),
+    ]);
+
+    if (results[0].status === "fulfilled") assignedFarmersCount = results[0].value;
+    if (results[1].status === "fulfilled") assignedBuyersCount = results[1].value;
+    if (results[2].status === "fulfilled") assignedBusinessesCount = results[2].value;
+    if (results[3].status === "fulfilled") openLeadsCount = results[3].value;
+    if (results[4].status === "fulfilled") tasksDueCount = results[4].value;
+    if (results[5].status === "fulfilled") pendingVerificationsCount = results[5].value;
+    if (results[6].status === "fulfilled") recentTasks = results[6].value;
+    if (results[7].status === "fulfilled") recentLeads = results[7].value;
+    if (results[8].status === "fulfilled") recentVerifications = results[8].value;
 
     const safeFullName = profile?.user?.fullName || "Field Agent";
     const safeEmail = profile?.user?.email || "";

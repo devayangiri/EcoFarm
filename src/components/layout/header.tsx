@@ -84,11 +84,11 @@ export function Header({
 
   const isAuthenticated =
     Boolean(userRole) &&
-    userRole.toUpperCase() !== "GUEST" &&
-    userRole.toLowerCase() !== "welcome";
+    (userRole || "").toUpperCase() !== "GUEST" &&
+    (userRole || "").toLowerCase() !== "welcome";
 
   const getDashboardHref = (role: string) => {
-    switch (role.toUpperCase()) {
+    switch ((role || "").toUpperCase()) {
       case "FARMER":
         return "/farmer";
       case "BUYER":
@@ -106,7 +106,7 @@ export function Header({
   };
 
   const getProfileHref = (role: string) => {
-    switch (role.toUpperCase()) {
+    switch ((role || "").toUpperCase()) {
       case "FARMER":
         return "/farmer/profile";
       case "BUYER":

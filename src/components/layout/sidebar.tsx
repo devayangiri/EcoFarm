@@ -30,7 +30,7 @@ export interface SidebarProps {
 }
 
 export function getSidebarNavItems(userRole: string = "FARMER") {
-  const normalizedRole = userRole.toUpperCase();
+  const normalizedRole = (userRole || "FARMER").toUpperCase();
 
   switch (normalizedRole) {
     case "FARMER":
