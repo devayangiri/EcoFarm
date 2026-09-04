@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { Prisma } from "@prisma/client";
+import { FEATURES } from "@/config/features";
 import type { AddToCartInput } from "@/lib/validators/cart.schema";
 
 export class CartService {
@@ -8,9 +9,29 @@ export class CartService {
    * Get or create active cart for a buyer
    */
   static async getOrCreateCart(buyerId: string) {
-    try {
-      let cart = await prisma.cart.findFirst({
-        where: { buyerId, status: "ACTIVE" },
+    if (!FEATURES.CART_AND_CHECKOUT) {
+      throw AppError.businessRule("Wholesale Cart and Checkout is a Phase 8 feature and is not yet available.");
+    }
+
+    let cart = await prisma.cart.findFirst({
+      where: { buyerId, status: "ACTIVE" },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                images: { where: { isPrimary: true }, take: 1 },
+                seller: { select: { id: true, fullName: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cart) {
+      cart = await prisma.cart.create({
+        data: { buyerId, status: "ACTIVE" },
         include: {
           items: {
             include: {
@@ -24,34 +45,9 @@ export class CartService {
           },
         },
       });
-
-      if (!cart) {
-        cart = await prisma.cart.create({
-          data: { buyerId, status: "ACTIVE" },
-          include: {
-            items: {
-              include: {
-                product: {
-                  include: {
-                    images: { where: { isPrimary: true }, take: 1 },
-                    seller: { select: { id: true, fullName: true } },
-                  },
-                },
-              },
-            },
-          },
-        });
-      }
-
-      return cart;
-    } catch {
-      return {
-        id: "temp-cart",
-        buyerId,
-        status: "ACTIVE",
-        items: [],
-      } as any;
     }
+
+    return cart;
   }
 
   /**

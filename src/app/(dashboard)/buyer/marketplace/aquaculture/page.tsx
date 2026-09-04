@@ -43,10 +43,31 @@ export default async function BuyerAquaMarketplacePage({
   };
 
   const validated = MarketplaceSearchSchema.parse(query);
-  const [result, facets] = await Promise.all([
-    MarketplaceService.searchProducts(validated, user.userId),
-    MarketplaceService.getMarketplaceFacets(),
-  ]);
+  let result = {
+    items: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+  };
+  let facets = {
+    categories: [] as { category: string; sector: string }[],
+    states: [] as string[],
+  };
+  let isDbUnavailable = false;
+
+  try {
+    const [fetchedResult, fetchedFacets] = await Promise.all([
+      MarketplaceService.searchProducts(validated, user.userId),
+      MarketplaceService.getMarketplaceFacets(),
+    ]);
+    result = fetchedResult as any;
+    facets = fetchedFacets as any;
+  } catch (err) {
+    isDbUnavailable = true;
+    console.error("[BuyerAquaMarketplace] Database query failed:", {
+      route: "/buyer/marketplace/aquaculture",
+      error: err instanceof Error ? err.message : String(err),
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   return (
     <AppShell showSidebar userRole="BUYER" userName={user.fullName} currentPath="/buyer/marketplace">
@@ -61,13 +82,32 @@ export default async function BuyerAquaMarketplacePage({
           ]}
         />
 
-        <MarketplaceBrowser
-          initialProducts={result.items as any}
-          pagination={result.pagination}
-          currentSector="AQUACULTURE"
-          facets={facets}
-          isBuyerPortal={true}
-        />
+        {isDbUnavailable ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-8 text-center space-y-4 max-w-xl mx-auto my-8 font-body">
+            <div className="flex items-center justify-center gap-2 text-amber-800 font-heading font-bold text-sm">
+              <span>Marketplace Catalog Temporarily Unavailable</span>
+            </div>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              We encountered a temporary database connectivity issue while loading verified aquaculture produce. Please try refreshing shortly.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <a
+                href="/buyer/marketplace/aquaculture"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 transition-colors"
+              >
+                Retry Connection
+              </a>
+            </div>
+          </div>
+        ) : (
+          <MarketplaceBrowser
+            initialProducts={result.items as any}
+            pagination={result.pagination}
+            currentSector="AQUACULTURE"
+            facets={facets}
+            isBuyerPortal={true}
+          />
+        )}
       </div>
     </AppShell>
   );

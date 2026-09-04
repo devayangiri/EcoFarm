@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { Prisma, Sector, BuyerType, RequirementStatus } from "@prisma/client";
+import { FEATURES } from "@/config/features";
 import type {
   UpdateBuyerProfileInput,
   CreateRequirementInput,
@@ -32,24 +33,10 @@ export class BuyerService {
    * Get Buyer Dashboard overview metrics & recommended products
    */
   static async getBuyerDashboard(buyerId: string) {
-    const [
-      savedCount,
-      requirementsCount,
-      inquiriesCount,
-      recentRequirements,
-      recommendedProducts,
-    ] = await Promise.all([
-      prisma.savedProduct.count({ where: { buyerId } }),
-      prisma.buyerRequirement.count({
-        where: { buyerId, status: "ACTIVE" },
-      }),
+    // 1. Fetch active Phase 3 core data
+    const [inquiriesCount, recommendedProducts] = await Promise.all([
       prisma.conversationParticipant.count({
         where: { userId: buyerId },
-      }),
-      prisma.buyerRequirement.findMany({
-        where: { buyerId },
-        orderBy: { createdAt: "desc" },
-        take: 3,
       }),
       prisma.product.findMany({
         where: { status: "ACTIVE", availableStock: { gt: 0 } },
@@ -82,6 +69,46 @@ export class BuyerService {
       }),
     ]);
 
+    // 2. Future-phase features (CASE A: feature-gated)
+    let savedCount: number | string = "Coming Soon";
+    let requirementsCount: number | string = "Coming Soon";
+    let recentRequirements: any[] = [];
+
+    if (FEATURES.SAVED_PRODUCTS) {
+      try {
+        savedCount = await prisma.savedProduct.count({ where: { buyerId } });
+      } catch {
+        savedCount = 0;
+      }
+    }
+
+    if (FEATURES.BUYER_REQUIREMENTS) {
+      try {
+        requirementsCount = await prisma.buyerRequirement.count({
+          where: { buyerId, status: "ACTIVE" },
+        });
+        const reqs = await prisma.buyerRequirement.findMany({
+          where: { buyerId },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        });
+        recentRequirements = reqs.map((r) => ({
+          id: r.id,
+          title: r.title,
+          sector: r.sector,
+          category: r.category,
+          quantity: r.quantity.toNumber(),
+          unit: r.unit,
+          targetPricePerUnit: r.targetPricePerUnit?.toNumber() ?? null,
+          status: r.status,
+          createdAt: r.createdAt,
+        }));
+      } catch {
+        requirementsCount = 0;
+        recentRequirements = [];
+      }
+    }
+
     return {
       metrics: {
         savedProducts: savedCount,
@@ -89,18 +116,12 @@ export class BuyerService {
         productInquiries: inquiriesCount,
         connectedSuppliers: 0,
       },
-      recentRequirements: recentRequirements.map((r) => ({
-        id: r.id,
-        title: r.title,
-        sector: r.sector,
-        category: r.category,
-        quantity: r.quantity.toNumber(),
-        unit: r.unit,
-        targetPricePerUnit: r.targetPricePerUnit?.toNumber() ?? null,
-        status: r.status,
-        createdAt: r.createdAt,
-      })),
-      recommendedProducts: recommendedProducts.map((p) => ({
+      features: {
+        isSavedProductsAvailable: FEATURES.SAVED_PRODUCTS,
+        isRequirementsAvailable: FEATURES.BUYER_REQUIREMENTS,
+      },
+      recentRequirements,
+      recommendedProducts: (recommendedProducts || []).map((p) => ({
         id: p.id,
         slug: p.slug,
         title: p.title,
@@ -248,6 +269,19 @@ export class BuyerService {
    * List saved products for a buyer
    */
   static async getSavedProducts(buyerId: string, page = 1, limit = 20) {
+    if (!FEATURES.SAVED_PRODUCTS) {
+      return {
+        isAvailable: false,
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          limit,
+          totalPages: 1,
+        },
+      };
+    }
+
     const skip = (page - 1) * limit;
 
     try {
@@ -318,6 +352,7 @@ export class BuyerService {
       }));
 
       return {
+        isAvailable: true,
         items,
         pagination: {
           total,
@@ -328,6 +363,7 @@ export class BuyerService {
       };
     } catch {
       return {
+        isAvailable: true,
         items: [],
         pagination: {
           total: 0,
@@ -343,6 +379,10 @@ export class BuyerService {
    * Save a product to buyer favorites
    */
   static async saveProduct(buyerId: string, productId: string) {
+    if (!FEATURES.SAVED_PRODUCTS) {
+      throw AppError.businessRule("Saved Products is a Phase 4 feature and is not yet available.");
+    }
+
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
@@ -380,6 +420,10 @@ export class BuyerService {
    * Remove a product from buyer favorites
    */
   static async unsaveProduct(buyerId: string, productId: string) {
+    if (!FEATURES.SAVED_PRODUCTS) {
+      return { success: true };
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.savedProduct.deleteMany({
         where: { buyerId, productId },
@@ -402,19 +446,31 @@ export class BuyerService {
    * List procurement requirements owned by buyer
    */
   static async getBuyerRequirements(buyerId: string, status?: string) {
-    return prisma.buyerRequirement.findMany({
-      where: {
-        buyerId,
-        status: status ? (status as RequirementStatus) : undefined,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    if (!FEATURES.BUYER_REQUIREMENTS) {
+      return [];
+    }
+
+    try {
+      return await prisma.buyerRequirement.findMany({
+        where: {
+          buyerId,
+          status: status ? (status as RequirementStatus) : undefined,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    } catch {
+      return [];
+    }
   }
 
   /**
    * Get single requirement with buyer ownership check (IDOR protection)
    */
   static async getRequirementById(buyerId: string, requirementId: string) {
+    if (!FEATURES.BUYER_REQUIREMENTS) {
+      throw AppError.notFound("Requirement not found");
+    }
+
     const req = await prisma.buyerRequirement.findUnique({
       where: { id: requirementId },
     });
@@ -434,6 +490,10 @@ export class BuyerService {
    * Create a new procurement requirement
    */
   static async createRequirement(buyerId: string, input: CreateRequirementInput) {
+    if (!FEATURES.BUYER_REQUIREMENTS) {
+      throw AppError.businessRule("Buyer Requirements is a Phase 4 feature and is not yet available.");
+    }
+
     const requirement = await prisma.$transaction(async (tx) => {
       const record = await tx.buyerRequirement.create({
         data: {
@@ -478,6 +538,10 @@ export class BuyerService {
     requirementId: string,
     input: UpdateRequirementInput
   ) {
+    if (!FEATURES.BUYER_REQUIREMENTS) {
+      throw AppError.businessRule("Buyer Requirements is a Phase 4 feature and is not yet available.");
+    }
+
     await this.getRequirementById(buyerId, requirementId);
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -526,6 +590,10 @@ export class BuyerService {
    * Delete / Cancel requirement with ownership check
    */
   static async deleteRequirement(buyerId: string, requirementId: string) {
+    if (!FEATURES.BUYER_REQUIREMENTS) {
+      throw AppError.businessRule("Buyer Requirements is a Phase 4 feature and is not yet available.");
+    }
+
     await this.getRequirementById(buyerId, requirementId);
 
     await prisma.$transaction(async (tx) => {

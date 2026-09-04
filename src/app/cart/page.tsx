@@ -1,9 +1,10 @@
 import React from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/rbac";
-import { CartService } from "@/services/cart.service";
+import { EmptyState } from "@/components/ui/empty-state";
 import { MarketplaceShell } from "@/components/public/marketplace-shell";
-import { CartView } from "@/components/cart/cart-view";
+import { FEATURES } from "@/config/features";
+import { Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,6 @@ export default async function CartPage() {
     redirect("/login?callbackUrl=/cart");
   }
 
-  const cart = await CartService.getCart(session.userId);
-
   return (
     <MarketplaceShell>
       <div className="py-6 max-w-stitch-container mx-auto space-y-6">
@@ -23,11 +22,17 @@ export default async function CartPage() {
             Wholesale Procurement Cart
           </h1>
           <p className="text-xs text-slate-neutral">
-            Review commodity lots, producer batches, and multi-vendor shipment freight before initiating checkout.
+            Multi-vendor wholesale procurement cart and integrated checkout.
           </p>
         </div>
 
-        <CartView initialCart={cart as any} />
+        <EmptyState
+          icon={Clock}
+          title="Wholesale Cart is coming soon."
+          description="Multi-vendor shopping cart, freight aggregation, and direct checkout are scheduled for Phase 8. Currently, buyers can explore listings and initiate direct inquiries with verified producers."
+          actionLabel="Explore Marketplace"
+          actionHref="/buyer/marketplace"
+        />
       </div>
     </MarketplaceShell>
   );

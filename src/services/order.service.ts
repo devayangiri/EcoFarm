@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { OrderStatus, OrderGroupStatus, Prisma } from "@prisma/client";
+import { FEATURES } from "@/config/features";
 import type { UpdateOrderStatusInput } from "@/lib/validators/order.schema";
 
 export class OrderService {
@@ -37,7 +38,7 @@ export class OrderService {
             include: {
               seller: { select: { id: true, fullName: true } },
               items: true,
-              timeline: { orderBy: { createdAt: "asc" } },
+              ...(FEATURES.ORDER_TIMELINES ? { timeline: { orderBy: { createdAt: "asc" as const } } } : {}),
             },
           },
           payments: true,
@@ -47,7 +48,13 @@ export class OrderService {
     ]);
 
     return {
-      orderGroups,
+      orderGroups: orderGroups.map((g) => ({
+        ...g,
+        sellerOrders: g.sellerOrders.map((so) => ({
+          ...so,
+          timeline: (so as any).timeline || [],
+        })),
+      })),
       pagination: {
         total,
         page,
@@ -68,7 +75,7 @@ export class OrderService {
           include: {
             seller: { select: { id: true, fullName: true } },
             items: true,
-            timeline: { orderBy: { createdAt: "asc" } },
+            ...(FEATURES.ORDER_TIMELINES ? { timeline: { orderBy: { createdAt: "asc" as const } } } : {}),
           },
         },
         payments: true,
@@ -83,7 +90,13 @@ export class OrderService {
       throw AppError.forbidden("You do not have permission to view this order");
     }
 
-    return group;
+    return {
+      ...group,
+      sellerOrders: group.sellerOrders.map((so) => ({
+        ...so,
+        timeline: (so as any).timeline || [],
+      })),
+    };
   }
 
   /**
@@ -96,7 +109,7 @@ export class OrderService {
         orderGroup: true,
         seller: { select: { id: true, fullName: true } },
         items: true,
-        timeline: { orderBy: { createdAt: "asc" } },
+        ...(FEATURES.ORDER_TIMELINES ? { timeline: { orderBy: { createdAt: "asc" as const } } } : {}),
       },
     });
 
@@ -108,7 +121,10 @@ export class OrderService {
       throw AppError.forbidden("You do not have permission to view this order");
     }
 
-    return order;
+    return {
+      ...order,
+      timeline: (order as any).timeline || [],
+    };
   }
 
   /**

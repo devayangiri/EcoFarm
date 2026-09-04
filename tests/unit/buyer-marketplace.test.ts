@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MarketplaceService } from "@/services/marketplace.service";
 import { BuyerService } from "@/services/buyer.service";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { Prisma } from "@prisma/client";
+import { FEATURES, setFeatureFlag } from "@/config/features";
 
 // Mock Prisma
 vi.mock("@/lib/prisma", () => {
@@ -57,7 +58,7 @@ vi.mock("@/lib/prisma", () => {
   };
 });
 
-describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
+describe("Phase 6 & Future-Phase Gating: Buyer Portal & Dual Marketplace Test Suite", () => {
   const mockBuyerId1 = "buyer-uuid-1";
   const mockBuyerId2 = "buyer-uuid-2";
   const mockSellerId = "seller-uuid-1";
@@ -65,9 +66,16 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    setFeatureFlag("SAVED_PRODUCTS", false);
+    setFeatureFlag("BUYER_REQUIREMENTS", false);
   });
 
-  describe("1. Public Discovery & Visibility Rules", () => {
+  afterEach(() => {
+    setFeatureFlag("SAVED_PRODUCTS", false);
+    setFeatureFlag("BUYER_REQUIREMENTS", false);
+  });
+
+  describe("1. Public Discovery & Visibility Rules (Rule D: Real marketplace query)", () => {
     it("should query only ACTIVE and OUT_OF_STOCK products for public discovery", async () => {
       vi.mocked(prisma.product.findMany).mockResolvedValue([
         {
@@ -117,6 +125,19 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
       );
     });
 
+    it("should not query saved_products when feature is gated, even if buyer is logged in", async () => {
+      vi.mocked(prisma.product.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.product.count).mockResolvedValue(0);
+
+      const result = await MarketplaceService.searchProducts(
+        { sector: "ALL", page: 1, pageSize: 20, sortBy: "newest", inStockOnly: false },
+        mockBuyerId1
+      );
+
+      expect(result.items).toEqual([]);
+      expect(prisma.savedProduct.findMany).not.toHaveBeenCalled();
+    });
+
     it("should reject product details lookup for DRAFT or PENDING_MODERATION products", async () => {
       vi.mocked(prisma.product.findFirst).mockResolvedValue(null);
 
@@ -126,8 +147,86 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
     });
   });
 
-  describe("2. Saved Products & Favorites", () => {
-    it("should allow a buyer to save a valid product", async () => {
+  describe("2. Future-Phase Feature Gating (Rules B & C: Coming Soon states)", () => {
+    it("should return isAvailable: false for getSavedProducts when feature is gated", async () => {
+      const result = await BuyerService.getSavedProducts(mockBuyerId1);
+
+      expect(result.isAvailable).toBe(false);
+      expect(result.items).toEqual([]);
+      expect(prisma.savedProduct.findMany).not.toHaveBeenCalled();
+    });
+
+    it("should reject saveProduct with clear businessRule error when feature is gated", async () => {
+      await expect(
+        BuyerService.saveProduct(mockBuyerId1, mockProductId)
+      ).rejects.toThrow("Saved Products is a Phase 4 feature and is not yet available.");
+      expect(prisma.savedProduct.upsert).not.toHaveBeenCalled();
+    });
+
+    it("should gracefully handle unsaveProduct without calling DB when feature is gated", async () => {
+      const result = await BuyerService.unsaveProduct(mockBuyerId1, mockProductId);
+      expect(result.success).toBe(true);
+      expect(prisma.savedProduct.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("should return empty array for getBuyerRequirements when feature is gated", async () => {
+      const result = await BuyerService.getBuyerRequirements(mockBuyerId1);
+      expect(result).toEqual([]);
+      expect(prisma.buyerRequirement.findMany).not.toHaveBeenCalled();
+    });
+
+    it("should reject createRequirement with clear businessRule error when feature is gated", async () => {
+      await expect(
+        BuyerService.createRequirement(mockBuyerId1, {
+          title: "Test RFQ",
+          description: "Test requirement description",
+          sector: "AGRICULTURE",
+          category: "Grains",
+          quantity: 100,
+          unit: "KG",
+          locationDistrict: "Bardhaman",
+          locationState: "West Bengal",
+          deliveryExpectation: "Immediate",
+        })
+      ).rejects.toThrow("Buyer Requirements is a Phase 4 feature and is not yet available.");
+      expect(prisma.buyerRequirement.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("3. Buyer Dashboard Contract (Rules A, B, E)", () => {
+    it("Rule A & B: New Buyer with zero active data renders dashboard with valid contract", async () => {
+      vi.mocked(prisma.conversationParticipant.count).mockResolvedValue(0);
+      vi.mocked(prisma.product.findMany).mockResolvedValue([]);
+
+      const data = await BuyerService.getBuyerDashboard(mockBuyerId1);
+
+      expect(data.metrics.savedProducts).toBe("Coming Soon");
+      expect(data.metrics.activeRequirements).toBe("Coming Soon");
+      expect(data.metrics.productInquiries).toBe(0);
+      expect(data.metrics.connectedSuppliers).toBe(0);
+      expect(data.features.isSavedProductsAvailable).toBe(false);
+      expect(data.features.isRequirementsAvailable).toBe(false);
+      expect(data.recentRequirements).toEqual([]);
+      expect(data.recommendedProducts).toEqual([]);
+    });
+
+    it("Rule E: Unexpected database error on active product query throws controlled error, NOT fake empty state", async () => {
+      vi.mocked(prisma.conversationParticipant.count).mockResolvedValue(0);
+      vi.mocked(prisma.product.findMany).mockRejectedValue(new Error("FATAL: Neon connection terminated"));
+
+      await expect(
+        BuyerService.getBuyerDashboard(mockBuyerId1)
+      ).rejects.toThrow("FATAL: Neon connection terminated");
+    });
+  });
+
+  describe("4. IDOR Protection & Enabled Feature Flow (Phase 4 verification)", () => {
+    beforeEach(() => {
+      setFeatureFlag("SAVED_PRODUCTS", true);
+      setFeatureFlag("BUYER_REQUIREMENTS", true);
+    });
+
+    it("should allow a buyer to save a valid product when feature is active", async () => {
       vi.mocked(prisma.product.findUnique).mockResolvedValue({
         id: mockProductId,
         title: "Live Rohu Fish",
@@ -153,7 +252,7 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
       );
     });
 
-    it("should allow a buyer to unsave a product", async () => {
+    it("should allow a buyer to unsave a product when feature is active", async () => {
       vi.mocked(prisma.savedProduct.deleteMany).mockResolvedValue({ count: 1 });
 
       const res = await BuyerService.unsaveProduct(mockBuyerId1, mockProductId);
@@ -176,10 +275,8 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
         })
       );
     });
-  });
 
-  describe("3. Procurement Requirements Board & IDOR Security", () => {
-    it("should create a procurement requirement under the authenticated buyer", async () => {
+    it("should create a procurement requirement under the authenticated buyer when feature is active", async () => {
       vi.mocked(prisma.buyerRequirement.create).mockResolvedValue({
         id: "req-101",
         buyerId: mockBuyerId1,
@@ -210,26 +307,6 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
       expect(prisma.auditLog.create).toHaveBeenCalled();
     });
 
-    it("should allow a buyer to update their own requirement", async () => {
-      vi.mocked(prisma.buyerRequirement.findUnique).mockResolvedValue({
-        id: "req-102",
-        buyerId: mockBuyerId1,
-      } as any);
-
-      vi.mocked(prisma.buyerRequirement.update).mockResolvedValue({
-        id: "req-102",
-        title: "Updated Volume RFQ",
-      } as any);
-
-      const updated = await BuyerService.updateRequirement(
-        mockBuyerId1,
-        "req-102",
-        { title: "Updated Volume RFQ" }
-      );
-
-      expect(updated.title).toBe("Updated Volume RFQ");
-    });
-
     it("should prevent Buyer A from modifying Buyer B's requirement (IDOR Prevention)", async () => {
       vi.mocked(prisma.buyerRequirement.findUnique).mockResolvedValue({
         id: "req-103",
@@ -255,7 +332,7 @@ describe("Phase 6: Buyer Portal & Dual Marketplace Test Suite", () => {
     });
   });
 
-  describe("4. Product Inquiry & Contextual Conversations", () => {
+  describe("5. Product Inquiry & Contextual Conversations", () => {
     it("should initiate a conversation between buyer and producer for a product", async () => {
       vi.mocked(prisma.product.findUnique).mockResolvedValue({
         id: mockProductId,

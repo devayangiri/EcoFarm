@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { Prisma, ProductStatus, Sector } from "@prisma/client";
 import type { MarketplaceSearchInput } from "@/lib/validators/marketplace.schema";
+import { FEATURES } from "@/config/features";
 
 export class MarketplaceService {
   /**
@@ -123,17 +124,22 @@ export class MarketplaceService {
       prisma.product.count({ where }),
     ]);
 
-    // Check saved status if buyer is logged in
+    // Check saved status if buyer is logged in and feature is active (Phase 4)
     let savedProductIds = new Set<string>();
-    if (currentUserId) {
-      const saved = await prisma.savedProduct.findMany({
-        where: {
-          buyerId: currentUserId,
-          productId: { in: items.map((i) => i.id) },
-        },
-        select: { productId: true },
-      });
-      savedProductIds = new Set(saved.map((s) => s.productId));
+    if (currentUserId && FEATURES.SAVED_PRODUCTS) {
+      try {
+        const saved = await prisma.savedProduct.findMany({
+          where: {
+            buyerId: currentUserId,
+            productId: { in: items.map((i) => i.id) },
+          },
+          select: { productId: true },
+        });
+        savedProductIds = new Set(saved.map((s) => s.productId));
+      } catch (err) {
+        console.warn("[MarketplaceService] Saved products query failed:", err instanceof Error ? err.message : err);
+        savedProductIds = new Set<string>();
+      }
     }
 
     const transformedItems = items.map((item) => ({
@@ -233,7 +239,7 @@ export class MarketplaceService {
     });
 
     let isSaved = false;
-    if (currentUserId) {
+    if (currentUserId && FEATURES.SAVED_PRODUCTS) {
       try {
         const saved = await prisma.savedProduct.findUnique({
           where: {

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency } from "@/lib/utils";
+import { FEATURES } from "@/config/features";
 import {
   Plus,
   Sprout,
@@ -32,10 +33,10 @@ export default async function BuyerRequirementsPage({
   searchParams,
 }: BuyerRequirementsPageProps) {
   const user = await requireRole("BUYER");
-  const requirements = await BuyerService.getBuyerRequirements(
-    user.userId,
-    searchParams.status
-  );
+  const isAvailable = FEATURES.BUYER_REQUIREMENTS;
+  const requirements = isAvailable
+    ? await BuyerService.getBuyerRequirements(user.userId, searchParams.status)
+    : [];
 
   return (
     <AppShell showSidebar userRole="BUYER" userName={user.fullName} currentPath="/buyer/requirements">
@@ -49,30 +50,40 @@ export default async function BuyerRequirementsPage({
           ]}
         />
 
-        {/* Status Filter Pills */}
-        <div className="flex flex-wrap gap-2 text-xs font-heading font-semibold">
-          {[
-            { label: "All Statuses", value: "" },
-            { label: "Active", value: "ACTIVE" },
-            { label: "Draft", value: "DRAFT" },
-            { label: "Closed", value: "CLOSED" },
-            { label: "Cancelled", value: "CANCELLED" },
-          ].map((st) => (
-            <Link
-              key={st.label}
-              href={`/buyer/requirements${st.value ? `?status=${st.value}` : ""}`}
-              className={`px-3 py-1 rounded-full border transition-all ${
-                (searchParams.status || "") === st.value
-                  ? "bg-brand-primary text-white border-brand-primary shadow-sm"
-                  : "bg-white text-slate-neutral border-surface-dim hover:bg-surface-low"
-              }`}
-            >
-              {st.label}
-            </Link>
-          ))}
-        </div>
+        {!isAvailable ? (
+          <EmptyState
+            icon={Clock}
+            title="Buyer Requirements are coming soon."
+            description="Procurement RFQs, custom crop volume bidding, and direct producer quotation workflows are scheduled for Phase 4. You can explore available farm harvests directly in the marketplace catalog."
+            actionLabel="Explore Marketplace"
+            actionHref="/buyer/marketplace"
+          />
+        ) : (
+          <>
+            {/* Status Filter Pills */}
+            <div className="flex flex-wrap gap-2 text-xs font-heading font-semibold">
+              {[
+                { label: "All Statuses", value: "" },
+                { label: "Active", value: "ACTIVE" },
+                { label: "Draft", value: "DRAFT" },
+                { label: "Closed", value: "CLOSED" },
+                { label: "Cancelled", value: "CANCELLED" },
+              ].map((st) => (
+                <Link
+                  key={st.label}
+                  href={`/buyer/requirements${st.value ? `?status=${st.value}` : ""}`}
+                  className={`px-3 py-1 rounded-full border transition-all ${
+                    (searchParams.status || "") === st.value
+                      ? "bg-brand-primary text-white border-brand-primary shadow-sm"
+                      : "bg-white text-slate-neutral border-surface-dim hover:bg-surface-low"
+                  }`}
+                >
+                  {st.label}
+                </Link>
+              ))}
+            </div>
 
-        {/* Requirements Grid */}
+            {/* Requirements Grid */}
         {requirements.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {requirements.map((req) => (
@@ -141,6 +152,8 @@ export default async function BuyerRequirementsPage({
             title="No Procurement Requirements Found"
             description="Create a bulk procurement request to broadcast your volume demands to verified producers and field agents."
           />
+        )}
+          </>
         )}
       </div>
     </AppShell>

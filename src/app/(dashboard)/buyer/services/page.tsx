@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Wrench, ChevronRight, Calendar } from "lucide-react";
+import { FEATURES } from "@/config/features";
+import { Wrench, ChevronRight, Calendar, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function BuyerServicesPage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login?callbackUrl=/buyer/services");
 
-  const { requests } = await ServiceService.getBuyerServiceRequests(session.userId);
+  const { requests, isAvailable } = await ServiceService.getBuyerServiceRequests(session.userId);
 
   return (
     <AppShell userRole={session.role} userName={session.fullName}>
@@ -28,7 +29,15 @@ export default async function BuyerServicesPage() {
           </p>
         </div>
 
-        {requests.length === 0 ? (
+        {isAvailable === false || !FEATURES.SERVICE_REQUESTS ? (
+          <EmptyState
+            icon={Clock}
+            title="Service Requests are coming soon."
+            description="Requesting equipment rental, cold storage, transport logistics, and soil/water testing directly from service providers is scheduled for Phase 7. In the meantime, you can explore available service listings."
+            actionLabel="Discover Available Services"
+            actionHref="/services"
+          />
+        ) : requests.length === 0 ? (
           <EmptyState
             title="No Service Requests Submitted"
             description="Explore the agricultural and aquaculture services directory to request machinery, transport, and testing solutions."

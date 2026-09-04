@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { Prisma, ServiceCategory, Sector, ServiceStatus, ServiceRequestStatus, ServiceQuotationStatus } from "@prisma/client";
+import { FEATURES } from "@/config/features";
 import type {
   ServiceDirectorySearchInput,
   CreateServiceListingInput,
@@ -634,90 +635,114 @@ export class ServiceService {
    * Get user's own service requests (Requester / Buyer view)
    */
   static async getBuyerServiceRequests(requesterId: string) {
-    const requests = await prisma.serviceRequest.findMany({
-      where: { requesterId },
-      include: {
-        service: {
-          include: {
-            providerProfile: {
-              select: { businessName: true, isVerified: true },
+    if (!FEATURES.SERVICE_REQUESTS) {
+      return {
+        isAvailable: false,
+        message: "Service Requests are coming soon.",
+        requests: [],
+      };
+    }
+
+    try {
+      const requests = await prisma.serviceRequest.findMany({
+        where: { requesterId },
+        include: {
+          service: {
+            include: {
+              providerProfile: {
+                select: { businessName: true, isVerified: true },
+              },
             },
           },
+          quotations: {
+            orderBy: { createdAt: "desc" },
+          },
         },
-        quotations: {
-          orderBy: { createdAt: "desc" },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      });
 
-    return {
-      requests: requests.map((r) => ({
-        id: r.id,
-        requestNumber: r.requestNumber,
-        serviceTitle: r.service.title,
-        category: r.service.category,
-        providerName: r.service.providerProfile.businessName,
-        isProviderVerified: r.service.providerProfile.isVerified,
-        requiredDate: r.requiredDate,
-        quantityOrScale: r.quantityOrScale,
-        status: r.status,
-        quotationsCount: r.quotations.length,
-        acceptedQuotationId: r.acceptedQuotationId,
-        createdAt: r.createdAt,
-      })),
-    };
+      return {
+        isAvailable: true,
+        requests: requests.map((r) => ({
+          id: r.id,
+          requestNumber: r.requestNumber,
+          serviceTitle: r.service.title,
+          category: r.service.category,
+          providerName: r.service.providerProfile.businessName,
+          isProviderVerified: r.service.providerProfile.isVerified,
+          requiredDate: r.requiredDate,
+          quantityOrScale: r.quantityOrScale,
+          status: r.status,
+          quotationsCount: r.quotations.length,
+          acceptedQuotationId: r.acceptedQuotationId,
+          createdAt: r.createdAt,
+        })),
+      };
+    } catch {
+      return {
+        isAvailable: true,
+        requests: [],
+      };
+    }
   }
 
   /**
    * Get incoming requests for provider
    */
   static async getProviderIncomingRequests(providerUserId: string) {
+    if (!FEATURES.SERVICE_REQUESTS) {
+      return { requests: [] };
+    }
+
     const profile = await prisma.providerProfile.findUnique({
       where: { userId: providerUserId },
     });
 
     if (!profile) return { requests: [] };
 
-    const requests = await prisma.serviceRequest.findMany({
-      where: {
-        service: { providerProfileId: profile.id },
-      },
-      include: {
-        service: true,
-        requester: {
-          select: { id: true, fullName: true, email: true, phone: true },
+    try {
+      const requests = await prisma.serviceRequest.findMany({
+        where: {
+          service: { providerProfileId: profile.id },
         },
-        quotations: {
-          where: { providerId: providerUserId },
+        include: {
+          service: true,
+          requester: {
+            select: { id: true, fullName: true, email: true, phone: true },
+          },
+          quotations: {
+            where: { providerId: providerUserId },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      });
 
-    return {
-      requests: requests.map((r) => ({
-        id: r.id,
-        requestNumber: r.requestNumber,
-        serviceTitle: r.service.title,
-        category: r.service.category,
-        requesterName: r.requester.fullName,
-        requiredDate: r.requiredDate,
-        quantityOrScale: r.quantityOrScale,
-        location: `${r.locationCityOrTown}, ${r.locationDistrict}, ${r.locationState}`,
-        status: r.status,
-        myQuotation: r.quotations[0]
-          ? {
-              id: r.quotations[0].id,
-              quotationNumber: r.quotations[0].quotationNumber,
-              amount: r.quotations[0].amount.toNumber(),
-              status: r.quotations[0].status,
-              validUntil: r.quotations[0].validUntil,
-            }
-          : null,
-        createdAt: r.createdAt,
-      })),
-    };
+      return {
+        requests: requests.map((r) => ({
+          id: r.id,
+          requestNumber: r.requestNumber,
+          serviceTitle: r.service.title,
+          category: r.service.category,
+          requesterName: r.requester.fullName,
+          requiredDate: r.requiredDate,
+          quantityOrScale: r.quantityOrScale,
+          location: `${r.locationCityOrTown}, ${r.locationDistrict}, ${r.locationState}`,
+          status: r.status,
+          myQuotation: r.quotations[0]
+            ? {
+                id: r.quotations[0].id,
+                quotationNumber: r.quotations[0].quotationNumber,
+                amount: r.quotations[0].amount.toNumber(),
+                status: r.quotations[0].status,
+                validUntil: r.quotations[0].validUntil,
+              }
+            : null,
+          createdAt: r.createdAt,
+        })),
+      };
+    } catch {
+      return { requests: [] };
+    }
   }
 
   /**

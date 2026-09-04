@@ -24,24 +24,32 @@ import {
   ArrowRight,
   Sprout,
   Waves,
+  Clock,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function BuyerDashboardPage() {
   const user = await requireRole("BUYER");
+  let isDbUnavailable = false;
   let dashboardData = {
-    metrics: { savedProducts: 0, activeRequirements: 0, productInquiries: 0, connectedSuppliers: 0 },
+    metrics: { savedProducts: "Coming Soon" as string | number, activeRequirements: "Coming Soon" as string | number, productInquiries: 0, connectedSuppliers: 0 },
+    features: { isSavedProductsAvailable: false, isRequirementsAvailable: false },
     recentRequirements: [] as any[],
     recommendedProducts: [] as any[],
   };
 
   try {
-    dashboardData = await BuyerService.getBuyerDashboard(user.userId) as any;
+    dashboardData = await BuyerService.getBuyerDashboard(user.userId);
   } catch (err) {
-    console.warn("Buyer dashboard database query fallback:", err instanceof Error ? err.message : err);
+    isDbUnavailable = true;
+    console.error("[BuyerDashboard] Active database query failed:", {
+      userId: user.userId,
+      error: err instanceof Error ? err.message : String(err),
+      timestamp: new Date().toISOString(),
+    });
   }
-  const { metrics, recentRequirements, recommendedProducts } = dashboardData;
+  const { metrics, features, recentRequirements, recommendedProducts } = dashboardData;
 
   return (
     <AppShell showSidebar userRole="BUYER" userName={user.fullName} currentPath="/buyer">
@@ -66,6 +74,25 @@ export default async function BuyerDashboardPage() {
             </div>
           }
         />
+
+        {isDbUnavailable && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-6 text-center space-y-3 max-w-xl mx-auto">
+            <div className="flex items-center justify-center gap-2 text-amber-800 font-heading font-bold text-sm">
+              <span>Dashboard Data Temporarily Unavailable</span>
+            </div>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              We encountered a temporary connection issue while querying live commodity data. Your account and profile remain completely safe.
+            </p>
+            <div className="pt-1">
+              <a
+                href="/buyer"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 transition-colors"
+              >
+                Retry Connection
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* B2B Marketplace Search & Category Quick Discovery */}
         <div className="rounded-2xl border border-surface-dim bg-white p-4 sm:p-5 shadow-sm space-y-4">
@@ -143,14 +170,14 @@ export default async function BuyerDashboardPage() {
           <StatCard
             title="Saved Products"
             value={metrics.savedProducts}
-            timeframe="Monitored lots"
+            timeframe={features.isSavedProductsAvailable ? "Monitored lots" : "Phase 4 Feature"}
             icon={Bookmark}
             iconVariant="primary"
           />
           <StatCard
             title="Active Requirements"
             value={metrics.activeRequirements}
-            timeframe="Published volume RFQs"
+            timeframe={features.isRequirementsAvailable ? "Published volume RFQs" : "Phase 4 Feature"}
             icon={FileText}
             iconVariant="secondary"
           />
@@ -192,7 +219,9 @@ export default async function BuyerDashboardPage() {
                   <Bookmark className="h-5 w-5" />
                 </div>
                 <div className="font-heading text-xs font-bold text-on-surface">Saved Products</div>
-                <div className="text-[11px] text-slate-neutral mt-0.5">{metrics.savedProducts} Saved Lots</div>
+                <div className="text-[11px] text-slate-neutral mt-0.5">
+                  {features.isSavedProductsAvailable ? `${metrics.savedProducts} Saved Lots` : "Phase 4 (Coming Soon)"}
+                </div>
               </Card>
             </Link>
 
@@ -202,7 +231,9 @@ export default async function BuyerDashboardPage() {
                   <Plus className="h-5 w-5" />
                 </div>
                 <div className="font-heading text-xs font-bold text-on-surface">Post Requirement</div>
-                <div className="text-[11px] text-slate-neutral mt-0.5">Publish Bulk Procurement RFQ</div>
+                <div className="text-[11px] text-slate-neutral mt-0.5">
+                  {features.isRequirementsAvailable ? "Publish Bulk Procurement RFQ" : "Phase 4 (Coming Soon)"}
+                </div>
               </Card>
             </Link>
 
@@ -300,6 +331,14 @@ export default async function BuyerDashboardPage() {
                 </Card>
               ))}
             </div>
+          ) : !features.isRequirementsAvailable ? (
+            <EmptyState
+              icon={Clock}
+              title="Buyer Requirements are coming soon."
+              description="Bulk procurement RFQs and custom volume sourcing requests will be enabled in Phase 4. Explore active harvests on the marketplace catalog."
+              actionLabel="Explore Catalog"
+              actionHref="/buyer/marketplace"
+            />
           ) : (
             <EmptyState
               title="No Active Requirements"

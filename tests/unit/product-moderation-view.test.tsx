@@ -7,7 +7,7 @@ const mockProducts = [
   {
     id: "prod-draft-1",
     title: "Draft Wheat",
-    sector: "AGRICULTURE",
+    sector: "AGRICULTURE" as const,
     category: "Grains",
     pricePerUnit: 30,
     unit: "KG",
@@ -21,7 +21,7 @@ const mockProducts = [
   {
     id: "prod-pending-1",
     title: "Pending Rice",
-    sector: "AGRICULTURE",
+    sector: "AGRICULTURE" as const,
     category: "Grains",
     pricePerUnit: 40,
     unit: "KG",
@@ -35,7 +35,7 @@ const mockProducts = [
   {
     id: "prod-active-1",
     title: "Active Corn",
-    sector: "AGRICULTURE",
+    sector: "AGRICULTURE" as const,
     category: "Grains",
     pricePerUnit: 25,
     unit: "KG",
@@ -49,7 +49,7 @@ const mockProducts = [
   {
     id: "prod-paused-1",
     title: "Paused Mustard",
-    sector: "AGRICULTURE",
+    sector: "AGRICULTURE" as const,
     category: "Seeds",
     pricePerUnit: 90,
     unit: "KG",
@@ -63,7 +63,7 @@ const mockProducts = [
   {
     id: "prod-rejected-1",
     title: "Rejected Jute",
-    sector: "AGRICULTURE",
+    sector: "AGRICULTURE" as const,
     category: "Fibers",
     pricePerUnit: 50,
     unit: "KG",

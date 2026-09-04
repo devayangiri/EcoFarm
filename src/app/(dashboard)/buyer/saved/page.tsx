@@ -8,6 +8,9 @@ import { ProductCard } from "@/components/cards/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 
+import { FEATURES } from "@/config/features";
+import { Clock } from "lucide-react";
+
 export const dynamic = "force-dynamic";
 
 interface BuyerSavedProductsPageProps {
@@ -22,7 +25,10 @@ export default async function BuyerSavedProductsPage({
   const user = await requireRole("BUYER");
   const currentPage = Number(searchParams.page) || 1;
 
-  const result = await BuyerService.getSavedProducts(user.userId, currentPage, 12);
+  const isAvailable = FEATURES.SAVED_PRODUCTS;
+  const result = isAvailable
+    ? await BuyerService.getSavedProducts(user.userId, currentPage, 12)
+    : { items: [], pagination: { total: 0, page: 1, limit: 12, totalPages: 1 } };
   const items = result.items;
   const pagination = result.pagination;
 
@@ -38,7 +44,15 @@ export default async function BuyerSavedProductsPage({
           ]}
         />
 
-        {items.length > 0 ? (
+        {!isAvailable ? (
+          <EmptyState
+            icon={Clock}
+            title="Saved Products are coming soon."
+            description="Commodity bookmarking, price fluctuation monitoring, and lot tracking will be enabled in Phase 4. Browse the live marketplace catalog to explore available harvests."
+            actionLabel="Browse Marketplace"
+            actionHref="/buyer/marketplace"
+          />
+        ) : items.length > 0 ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {items.map((item) => (
