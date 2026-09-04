@@ -50,3 +50,4 @@ Thumbs.db
 *.tsbuildinfo
 *.log
 dev.log
+/scratch/

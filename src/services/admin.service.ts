@@ -496,26 +496,58 @@ export class AdminService {
 
     if (!product) throw AppError.notFound("Product not found");
 
+    if (product.status === "DRAFT") {
+      throw AppError.businessRule(
+        "Draft products must be submitted for moderation by the seller before approval."
+      );
+    }
+
     let newStatus: ProductStatus = product.status;
     let auditAction = "PRODUCT_MODERATED";
 
     switch (input.action) {
       case "APPROVE":
+        if (product.status !== "PENDING_MODERATION") {
+          throw AppError.businessRule(
+            `Only products in PENDING_MODERATION can be approved. Current status: ${product.status}`
+          );
+        }
         newStatus = "ACTIVE";
         auditAction = "PRODUCT_APPROVED";
         break;
+
       case "REJECT":
+        if (product.status !== "PENDING_MODERATION") {
+          throw AppError.businessRule(
+            `Only products in PENDING_MODERATION can be rejected. Current status: ${product.status}`
+          );
+        }
         newStatus = "REJECTED";
         auditAction = "PRODUCT_REJECTED";
         break;
+
       case "PAUSE":
+        if (product.status !== "ACTIVE") {
+          throw AppError.businessRule(
+            `Only ACTIVE products can be paused. Current status: ${product.status}`
+          );
+        }
         newStatus = "PAUSED";
         auditAction = "PRODUCT_PAUSED";
         break;
+
       case "RESTORE":
+        if (product.status !== "PAUSED") {
+          throw AppError.businessRule(
+            `Only PAUSED products can be restored to active. Current status: ${product.status}`
+          );
+        }
         newStatus = "ACTIVE";
         auditAction = "PRODUCT_RESTORED";
         break;
+
+      default:
+        throw AppError.validation(`Invalid moderation action: ${input.action}`);
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -542,17 +574,37 @@ export class AdminService {
       return p;
     });
 
-    // Notify seller
-    await NotificationService.createNotificationFromEvent({
-      userId: product.sellerId,
-      type: "PRODUCT_MODERATION",
-      title: `Product Listing ${input.action === "APPROVE" ? "Approved" : "Status Updated"}`,
-      body:
-        input.reason ||
-        `Your product "${product.title}" has been ${input.action.toLowerCase()}d by moderators.`,
-      resourceType: "Product",
-      resourceId: productId,
-    });
+    // Notify seller (Approval-first: non-blocking follow-up after atomic DB commit)
+    try {
+      const notificationTitle =
+        input.action === "APPROVE"
+          ? "Product Listing Approved"
+          : input.action === "REJECT"
+          ? "Product Listing Rejected"
+          : input.action === "PAUSE"
+          ? "Product Listing Paused"
+          : "Product Listing Restored";
+
+      const defaultBody =
+        input.action === "APPROVE"
+          ? `Your product "${product.title}" has been approved and is now live on the marketplace.`
+          : input.action === "REJECT"
+          ? `Your product "${product.title}" was not approved by moderators.${input.reason ? ` Reason: ${input.reason}` : ""}`
+          : input.action === "PAUSE"
+          ? `Your product "${product.title}" has been paused by platform administrators.${input.reason ? ` Reason: ${input.reason}` : ""}`
+          : `Your product "${product.title}" has been restored to active status on the marketplace.`;
+
+      await NotificationService.createNotificationFromEvent({
+        userId: product.sellerId,
+        type: "PRODUCT_MODERATION",
+        title: notificationTitle,
+        body: input.reason && input.action !== "APPROVE" ? input.reason : defaultBody,
+        resourceType: "Product",
+        resourceId: productId,
+      });
+    } catch (notifErr) {
+      console.error("[AdminService.moderateProduct] Seller notification delivery failed:", notifErr);
+    }
 
     return updated;
   }

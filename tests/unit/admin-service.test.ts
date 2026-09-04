@@ -221,6 +221,118 @@ describe("Phase 13 — Admin Control Center & Governance Unit Tests", () => {
       );
       expect(res.status).toBe("ACTIVE");
     });
+
+    it("rejects moderation on DRAFT products with business rule error", async () => {
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: "prod-draft",
+        title: "Draft Crop",
+        sellerId: "seller-1",
+        status: "DRAFT",
+      } as any);
+
+      await expect(
+        AdminService.moderateProduct("admin-1", "prod-draft", { action: "APPROVE" })
+      ).rejects.toThrow("Draft products must be submitted for moderation by the seller before approval.");
+    });
+
+    it("rejects approval on ACTIVE products", async () => {
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: "prod-active",
+        title: "Active Crop",
+        sellerId: "seller-1",
+        status: "ACTIVE",
+      } as any);
+
+      await expect(
+        AdminService.moderateProduct("admin-1", "prod-active", { action: "APPROVE" })
+      ).rejects.toThrow("Only products in PENDING_MODERATION can be approved");
+    });
+
+    it("moderates PENDING_MODERATION to REJECTED", async () => {
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: "prod-2",
+        title: "Substandard Grain",
+        sellerId: "seller-2",
+        status: "PENDING_MODERATION",
+      } as any);
+      vi.mocked(prisma.product.update).mockResolvedValue({
+        id: "prod-2",
+        status: "REJECTED",
+      } as any);
+
+      const res = await AdminService.moderateProduct("admin-1", "prod-2", {
+        action: "REJECT",
+        reason: "Does not meet quality standards",
+      });
+
+      expect(prisma.product.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "prod-2" },
+          data: { status: "REJECTED" },
+        })
+      );
+      expect(prisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "PRODUCT_REJECTED",
+            resource: "Product",
+            resourceId: "prod-2",
+          }),
+        })
+      );
+      expect(res.status).toBe("REJECTED");
+    });
+
+    it("pauses an ACTIVE product", async () => {
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: "prod-3",
+        title: "Active Grain",
+        sellerId: "seller-3",
+        status: "ACTIVE",
+      } as any);
+      vi.mocked(prisma.product.update).mockResolvedValue({
+        id: "prod-3",
+        status: "PAUSED",
+      } as any);
+
+      const res = await AdminService.moderateProduct("admin-1", "prod-3", {
+        action: "PAUSE",
+        reason: "Temporary compliance hold",
+      });
+
+      expect(prisma.product.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "prod-3" },
+          data: { status: "PAUSED" },
+        })
+      );
+      expect(res.status).toBe("PAUSED");
+    });
+
+    it("restores a PAUSED product to ACTIVE", async () => {
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: "prod-4",
+        title: "Paused Grain",
+        sellerId: "seller-4",
+        status: "PAUSED",
+      } as any);
+      vi.mocked(prisma.product.update).mockResolvedValue({
+        id: "prod-4",
+        status: "ACTIVE",
+      } as any);
+
+      const res = await AdminService.moderateProduct("admin-1", "prod-4", {
+        action: "RESTORE",
+      });
+
+      expect(prisma.product.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "prod-4" },
+          data: { status: "ACTIVE" },
+        })
+      );
+      expect(res.status).toBe("ACTIVE");
+    });
   });
 
   describe("4. Polymorphic Target Existence Validation", () => {

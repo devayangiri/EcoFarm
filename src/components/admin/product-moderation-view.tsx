@@ -52,7 +52,11 @@ export function ProductModerationView({ initialProducts }: { initialProducts: Pr
         body: JSON.stringify({ action: actionType, reason }),
       });
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || "Failed to moderate product");
+      const errorMessage =
+        json.error?.message ||
+        json.message ||
+        "Failed to moderate product";
+      if (!res.ok || !json.success) throw new Error(errorMessage);
 
       let nextStatus: ProductStatus = selectedProduct.status;
       if (actionType === "APPROVE" || actionType === "RESTORE") nextStatus = "ACTIVE";
@@ -92,8 +96,9 @@ export function ProductModerationView({ initialProducts }: { initialProducts: Pr
           <option value="ALL">All Statuses</option>
           <option value="PENDING_MODERATION">Pending Moderation</option>
           <option value="ACTIVE">Active</option>
-          <option value="REJECTED">Rejected</option>
           <option value="PAUSED">Paused</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="DRAFT">Draft (Unsubmitted)</option>
         </select>
       </div>
 
@@ -112,10 +117,18 @@ export function ProductModerationView({ initialProducts }: { initialProducts: Pr
                   {p.sector}
                 </Badge>
                 <Badge
-                  variant={p.status === "ACTIVE" ? "primary" : p.status === "PENDING_MODERATION" ? "warning" : "error"}
+                  variant={
+                    p.status === "ACTIVE"
+                      ? "primary"
+                      : p.status === "PENDING_MODERATION"
+                      ? "warning"
+                      : p.status === "DRAFT"
+                      ? "neutral"
+                      : "error"
+                  }
                   size="sm"
                 >
-                  {p.status}
+                  {p.status === "DRAFT" ? "DRAFT (UNSUBMITTED)" : p.status}
                 </Badge>
               </div>
 
@@ -143,27 +156,27 @@ export function ProductModerationView({ initialProducts }: { initialProducts: Pr
             </div>
 
             <div className="flex items-center gap-1.5 pt-2 border-t border-surface-dim">
-              {p.status !== "ACTIVE" && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleAction(p, "APPROVE")}
-                  className="text-xs flex-1 h-8 gap-1"
-                >
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Approve
-                </Button>
-              )}
-              {p.status !== "REJECTED" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAction(p, "REJECT")}
-                  className="text-xs flex-1 h-8 gap-1 text-status-error hover:bg-status-error/10"
-                >
-                  <XCircle className="h-3.5 w-3.5" />
-                  Reject
-                </Button>
+              {p.status === "PENDING_MODERATION" && (
+                <>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleAction(p, "APPROVE")}
+                    className="text-xs flex-1 h-8 gap-1"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAction(p, "REJECT")}
+                    className="text-xs flex-1 h-8 gap-1 text-status-error hover:bg-status-error/10"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    Reject
+                  </Button>
+                </>
               )}
               {p.status === "ACTIVE" && (
                 <Button
@@ -175,6 +188,27 @@ export function ProductModerationView({ initialProducts }: { initialProducts: Pr
                   <PauseCircle className="h-3.5 w-3.5" />
                   Pause
                 </Button>
+              )}
+              {p.status === "PAUSED" && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleAction(p, "RESTORE")}
+                  className="text-xs flex-1 h-8 gap-1"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Restore
+                </Button>
+              )}
+              {p.status === "DRAFT" && (
+                <span className="text-[11px] text-slate-neutral italic py-1 w-full text-center">
+                  Awaiting Seller Submission
+                </span>
+              )}
+              {p.status === "REJECTED" && (
+                <span className="text-[11px] text-status-error italic py-1 w-full text-center">
+                  Rejected (Awaiting Seller Resubmission)
+                </span>
               )}
             </div>
           </Card>
