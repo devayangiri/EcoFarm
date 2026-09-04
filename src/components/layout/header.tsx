@@ -142,102 +142,101 @@ export function Header({
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-surface-dim/80 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(13,28,47,0.04)]">
-      <div className="mx-auto flex h-16 max-w-stitch-container items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left: Brand Logo & Tagline */}
-        <div className="flex items-center gap-6 lg:gap-8">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary rounded-md"
-            aria-label="EcoFarm Home"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-primary text-white shadow-sm ring-1 ring-brand-primary/20">
-              <Sprout className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 font-heading text-lg font-bold tracking-tight text-brand-primary leading-none">
-                <span>Eco</span>
-                <span className="flex items-center text-brand-secondary">
-                  <Waves className="h-4 w-4" />
-                </span>
-                <span className="text-on-surface">Farm</span>
-              </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-neutral/70 mt-0.5 leading-none">
-                Digital Agriculture Platform
+    <header className="hidden md:block sticky top-0 z-40 w-full border-b border-surface-dim/80 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(13,28,47,0.04)]">
+      <div className="mx-auto flex h-18 sm:h-20 max-w-stitch-container items-center justify-between gap-3 lg:gap-4 xl:gap-6 px-4 sm:px-6 lg:px-8">
+        {/* 1. Left: Brand Logo & Tagline */}
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary rounded-md shrink-0"
+          aria-label="EcoFarm Home"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-primary text-white shadow-sm ring-1 ring-brand-primary/20 shrink-0">
+            <Sprout className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1 font-heading text-lg font-bold tracking-tight text-brand-primary leading-none">
+              <span>Eco</span>
+              <span className="flex items-center text-brand-secondary">
+                <Waves className="h-4 w-4" />
               </span>
+              <span className="text-on-surface">Farm</span>
             </div>
-          </Link>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-neutral/70 mt-1 leading-none">
+              Digital Agriculture Platform
+            </span>
+          </div>
+        </Link>
 
-          {/* Center: Primary Navigation Links (Desktop) */}
-          <nav
-            aria-label="Primary navigation"
-            className="hidden md:flex items-center gap-1 lg:gap-2"
-          >
-            {navLinks.map((link) => {
-              const isActive =
-                link.href === "/#how-it-works"
-                  ? false
-                  : activePath === link.href || activePath.startsWith(`${link.href}/`);
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className={`relative px-3 py-2 text-xs lg:text-sm font-semibold transition-all rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-                    isActive
-                      ? "text-brand-primary bg-surface-low font-bold"
-                      : "text-slate-neutral hover:text-brand-primary hover:bg-surface-low/60"
-                  }`}
-                >
-                  {link.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-brand-primary rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Right Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Real Global Search Bar (Desktop) */}
-          <form
-            onSubmit={handleSearchSubmit}
-            role="search"
-            className="hidden sm:flex items-center relative h-9 w-48 md:w-56 lg:w-72 rounded-lg border border-surface-dim bg-surface-low/70 text-xs text-slate-neutral hover:border-brand-secondary/40 focus-within:bg-white focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all shadow-xs"
-          >
-            <button
-              type="submit"
-              className="flex items-center justify-center pl-2.5 pr-1 text-slate-neutral hover:text-brand-primary transition-colors focus:outline-none"
-              aria-label="Submit search"
-            >
-              <Search className="h-3.5 w-3.5" />
-            </button>
-            <input
-              ref={searchInputRef}
-              type="text"
-              name="search"
-              value={headerSearch}
-              onChange={(e) => setHeaderSearch(e.target.value)}
-              placeholder="Search commodities..."
-              aria-label="Search commodities"
-              className="w-full bg-transparent text-xs text-on-surface placeholder:text-slate-neutral/70 focus:outline-none pr-1"
-            />
-            {headerSearch ? (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                aria-label="Clear search text"
-                className="pr-2.5 text-slate-neutral/60 hover:text-on-surface transition-colors focus:outline-none"
+        {/* 2. Center/Main: Navigation Links */}
+        <nav
+          aria-label="Primary navigation"
+          className="flex items-center gap-1 lg:gap-1.5 shrink-0"
+        >
+          {navLinks.map((link) => {
+            const isActive =
+              link.href === "/#how-it-works"
+                ? false
+                : activePath === link.href || activePath.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`relative px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-semibold transition-all rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary whitespace-nowrap ${
+                  isActive
+                    ? "text-brand-primary bg-surface-low font-bold"
+                    : "text-slate-neutral hover:text-brand-primary hover:bg-surface-low/60"
+                }`}
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <kbd className="hidden lg:inline-flex h-4 mr-2 items-center rounded border border-surface-dim bg-white px-1 text-[9px] font-mono text-slate-neutral/60 pointer-events-none select-none">
-                ⌘K
-              </kbd>
-            )}
-          </form>
+                {link.label}
+                {isActive && (
+                  <span className="absolute bottom-0 left-2.5 right-2.5 h-0.5 bg-brand-primary rounded-full" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* 3. Search: High-Visibility Real Functional Search Form (320-460px) */}
+        <form
+          onSubmit={handleSearchSubmit}
+          role="search"
+          className="flex items-center relative h-10 w-full max-w-[260px] lg:max-w-[340px] xl:max-w-[420px] rounded-xl border border-slate-300/90 bg-white text-xs text-on-surface shadow-xs hover:border-brand-primary/50 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all shrink"
+        >
+          <button
+            type="submit"
+            className="flex items-center justify-center pl-3 pr-2 text-slate-neutral hover:text-brand-primary transition-colors focus:outline-none"
+            aria-label="Submit search"
+          >
+            <Search className="h-4 w-4 text-brand-primary" />
+          </button>
+          <input
+            ref={searchInputRef}
+            type="text"
+            name="search"
+            value={headerSearch}
+            onChange={(e) => setHeaderSearch(e.target.value)}
+            placeholder="Search commodities..."
+            aria-label="Search commodities"
+            className="w-full bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-slate-neutral/80 focus:outline-none pr-1.5"
+          />
+          {headerSearch ? (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              aria-label="Clear search text"
+              className="pr-3 text-slate-neutral/60 hover:text-on-surface transition-colors focus:outline-none"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : (
+            <kbd className="hidden lg:inline-flex h-5 mr-2.5 items-center rounded border border-surface-dim bg-surface-low px-1.5 text-[10px] font-mono font-medium text-slate-neutral/70 pointer-events-none select-none">
+              ⌘K
+            </kbd>
+          )}
+        </form>
+
+        {/* 4. Right Actions */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
 
           {isAuthenticated ? (
             <div className="flex items-center gap-2 sm:gap-3">
