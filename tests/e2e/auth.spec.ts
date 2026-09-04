@@ -6,7 +6,7 @@ test.describe("Agri-Aqua Authentication & RBAC E2E", () => {
     await expect(page).toHaveTitle(/Sign In \| EcoFarm/i);
     await expect(page.locator("h1")).toContainText("Welcome Back");
     await expect(page.getByPlaceholder(/farmer@agriaqua.dev/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /Sign In to Network/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sign In to (EcoFarm|Network)/i })).toBeVisible();
   });
 
   test("Guest can navigate to registration page and step through role selection", async ({ page }) => {

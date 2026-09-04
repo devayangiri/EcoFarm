@@ -117,19 +117,39 @@ export async function middleware(request: NextRequest) {
 
   const isAuthenticated = !!sessionPayload && sessionPayload.status !== "SUSPENDED";
 
-  // 5. Handle auth pages (/login, /register) when already logged in
+  // 5. Handle auth pages (/login, /register, /role-select)
   if (pathname === "/login" || pathname === "/register" || pathname === "/role-select") {
-    const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
-    // Only redirect authenticated users away from /login if there is NO callbackUrl.
-    // If callbackUrl is present, the user was redirected to re-authenticate (e.g. session invalidated),
-    // and we must clear any stale cookie and let them see the login screen to avoid ERR_TOO_MANY_REDIRECTS.
-    if (isAuthenticated && !callbackUrl) {
-      const targetDashboard = getRoleDashboardPath(sessionPayload.role);
+    if (isAuthenticated) {
+      const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
+      const userRole = sessionPayload.role;
+
+      // Check if callbackUrl is a valid relative internal path and authorized for this role
+      if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
+        const isAllowedCallback =
+          (callbackUrl.startsWith("/farmer") && (userRole === "FARMER" || userRole === "ADMIN")) ||
+          (callbackUrl.startsWith("/buyer") && (userRole === "BUYER" || userRole === "ADMIN")) ||
+          (callbackUrl.startsWith("/agent") && (userRole === "AGENT" || userRole === "ADMIN")) ||
+          (callbackUrl.startsWith("/provider") && (userRole === "SERVICE_PROVIDER" || userRole === "ADMIN")) ||
+          (callbackUrl.startsWith("/admin") && userRole === "ADMIN") ||
+          (!callbackUrl.startsWith("/farmer") &&
+           !callbackUrl.startsWith("/buyer") &&
+           !callbackUrl.startsWith("/agent") &&
+           !callbackUrl.startsWith("/provider") &&
+           !callbackUrl.startsWith("/admin"));
+
+        if (isAllowedCallback) {
+          return withResponseHeaders(NextResponse.redirect(new URL(callbackUrl, request.url)));
+        }
+      }
+
+      // Default redirect to the role's authorized dashboard
+      const targetDashboard = getRoleDashboardPath(userRole);
       return withResponseHeaders(NextResponse.redirect(new URL(targetDashboard, request.url)));
     }
 
+    // If unauthenticated but an invalid/expired/tampered session cookie is present, clear it cleanly
     const response = NextResponse.next({ request: { headers: requestHeaders } });
-    if (callbackUrl && request.cookies.has(SESSION_COOKIE_NAME)) {
+    if (request.cookies.has(SESSION_COOKIE_NAME)) {
       response.cookies.delete(SESSION_COOKIE_NAME);
     }
     return withResponseHeaders(response);

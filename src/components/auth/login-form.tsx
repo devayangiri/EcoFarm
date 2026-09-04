@@ -51,8 +51,7 @@ export function LoginForm() {
 
       // Successful login -> Redirect to role dashboard or callbackUrl
       const targetUrl = callbackUrl || result.data.redirectUrl || "/";
-      router.push(targetUrl);
-      router.refresh();
+      window.location.href = targetUrl;
     } catch {
       setError("Unable to connect to the server. Please check your network and try again.");
       setIsLoading(false);
@@ -121,7 +120,7 @@ export function LoginForm() {
           </>
         ) : (
           <>
-            <span>Sign In to Network</span>
+            <span>Sign In to EcoFarm</span>
             <ArrowRight className="h-4 w-4" />
           </>
         )}
