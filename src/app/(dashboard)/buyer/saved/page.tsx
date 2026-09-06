@@ -72,7 +72,11 @@ export default async function BuyerSavedProductsPage({
                   locationDistrict={item.product.locationDistrict}
                   locationState={item.product.locationState}
                   imageUrl={item.product.imageUrl}
+                  moq={item.product.minimumOrderQuantity}
                   isSaved={true}
+                  isInCart={item.product.isInCart}
+                  isBuyerPortal={true}
+                  userRole="BUYER"
                 />
               ))}
             </div>

@@ -318,7 +318,7 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
       {cartSuccess && (
         <Alert variant="success" onDismiss={() => setCartSuccess(false)}>
           Commodity lot added to your procurement cart.{" "}
-          <Link href="/cart" className="underline font-bold">
+          <Link href="/buyer/cart" className="underline font-bold">
             View Cart & Checkout
           </Link>
         </Alert>
@@ -663,7 +663,7 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
                       variant="outline"
                       size="lg"
                       className="w-full border-brand-primary text-brand-primary bg-brand-primary/5 hover:bg-brand-primary/10"
-                      onClick={() => router.push("/cart")}
+                      onClick={() => router.push("/buyer/cart")}
                       leftIcon={<Check className="h-4 w-4 text-brand-primary" />}
                       rightIcon={<ArrowRight className="h-4 w-4" />}
                     >
@@ -774,7 +774,7 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/cart")}
+                onClick={() => router.push("/buyer/cart")}
                 className="min-h-[44px] px-3 text-xs font-bold border-brand-primary text-brand-primary bg-brand-primary/5"
                 rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
               >

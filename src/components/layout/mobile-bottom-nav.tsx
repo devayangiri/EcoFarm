@@ -46,7 +46,7 @@ export function getRoleNavTabs(userRole: string = "GUEST"): MobileNavTab[] {
       return [
         { label: "Market", href: "/marketplace", icon: Store },
         { label: "Saved", href: "/buyer/saved", icon: Bookmark },
-        { label: "Cart", href: "/cart", icon: ShoppingBag },
+        { label: "Cart", href: "/buyer/cart", icon: ShoppingBag },
         { label: "Orders", href: "/buyer/orders", icon: Package },
         { label: "Messages", href: "/messages", icon: MessageSquare },
       ];

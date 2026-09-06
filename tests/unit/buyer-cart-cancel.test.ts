@@ -576,4 +576,75 @@ describe("Buyer Cart State Sync & Safe Order Cancellation", () => {
       expect(result.pagination.total).toBe(1);
     });
   });
+
+  // ----------------------------------------------------
+  // 6. SAVED PRODUCTS CART MEMBERSHIP SYNC
+  // ----------------------------------------------------
+  describe("6. Saved Products Cart Membership Sync", () => {
+    it("getSavedProducts populates isInCart: true for items in active cart", async () => {
+      (prisma.savedProduct.findMany as any).mockResolvedValue([
+        {
+          id: "saved-1",
+          createdAt: new Date(),
+          product: {
+            id: "prod-in-cart",
+            slug: "prod-in-cart-slug",
+            title: "Organic Wheat",
+            description: "Fresh harvest",
+            sector: "AGRICULTURE",
+            category: "Grains",
+            variety: "Sharbati",
+            pricePerUnit: new Prisma.Decimal(2500),
+            unit: "QUINTAL",
+            minimumOrderQuantity: new Prisma.Decimal(10),
+            availableStock: new Prisma.Decimal(500),
+            locationDistrict: "Indore",
+            locationState: "Madhya Pradesh",
+            status: "ACTIVE",
+            images: [{ url: "https://example.com/img.jpg" }],
+            seller: {
+              id: "seller-1",
+              fullName: "Farmer Ram",
+              farmerProfile: { isVerified: true },
+            },
+          },
+        },
+        {
+          id: "saved-2",
+          createdAt: new Date(),
+          product: {
+            id: "prod-not-in-cart",
+            slug: "prod-not-in-cart-slug",
+            title: "Basmati Rice",
+            description: "Aromatic grain",
+            sector: "AGRICULTURE",
+            category: "Grains",
+            variety: "1121",
+            pricePerUnit: new Prisma.Decimal(4500),
+            unit: "QUINTAL",
+            minimumOrderQuantity: new Prisma.Decimal(5),
+            availableStock: new Prisma.Decimal(200),
+            locationDistrict: "Karnal",
+            locationState: "Haryana",
+            status: "ACTIVE",
+            images: [],
+            seller: {
+              id: "seller-2",
+              fullName: "Farmer Shyam",
+              farmerProfile: { isVerified: true },
+            },
+          },
+        },
+      ]);
+      (prisma.savedProduct.count as any).mockResolvedValue(2);
+      (prisma.cart.findFirst as any).mockResolvedValue({
+        items: [{ productId: "prod-in-cart" }],
+      });
+
+      const res = await BuyerService.getSavedProducts("buyer-123", 1, 10);
+      expect(res.items.length).toBe(2);
+      expect(res.items[0].product.isInCart).toBe(true);
+      expect(res.items[1].product.isInCart).toBe(false);
+    });
+  });
 });

@@ -333,6 +333,8 @@ export default async function BuyerDashboardPage() {
                   locationState={p.locationState}
                   imageUrl={p.imageUrl}
                   isBuyerPortal={true}
+                  isInCart={p.isInCart}
+                  userRole="BUYER"
                 />
               ))}
             </div>

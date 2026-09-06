@@ -56,6 +56,7 @@ export interface MarketplaceBrowserProps {
     states: string[];
   };
   isBuyerPortal?: boolean;
+  userRole?: string | null;
 }
 
 export function MarketplaceBrowser({
@@ -64,9 +65,11 @@ export function MarketplaceBrowser({
   currentSector,
   facets,
   isBuyerPortal = false,
+  userRole: initialUserRole,
 }: MarketplaceBrowserProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const userRole = initialUserRole ?? (isBuyerPortal ? "BUYER" : null);
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
 
@@ -125,22 +128,43 @@ export function MarketplaceBrowser({
 
   const handleAddToCart = async (productId: string) => {
     const product = initialProducts.find((p) => p.id === productId);
+    const targetIdentifier = product?.slug || productId;
+
+    // Unauthenticated Guest -> redirect to login
+    if (!userRole && !isBuyerPortal) {
+      router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
+      return;
+    }
+
+    // Role check: Non-buyer role attempting to buy
+    if (userRole !== "BUYER" && !isBuyerPortal) {
+      throw new Error("Only registered commercial buyers can place wholesale orders");
+    }
+
     const qty = product?.minimumOrderQuantity || 1;
 
-    try {
-      const res = await fetch("/api/cart/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: qty }),
-      });
-      if (res.ok) {
-        setCartStatusMap((prev) => ({ ...prev, [productId]: true }));
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("cart-updated"));
-        }
+    const res = await fetch("/api/cart/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, quantity: qty }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok || !json.success) {
+      if (res.status === 401) {
+        router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
+        return;
       }
-    } catch (err) {
-      console.error("[MarketplaceBrowser] Failed to add to cart:", err);
+      if (res.status === 403) {
+        throw new Error("Only registered commercial buyers can place wholesale orders");
+      }
+      throw new Error(json.message || "Failed to add commodity lot to cart");
+    }
+
+    setCartStatusMap((prev) => ({ ...prev, [productId]: true }));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("cart-updated"));
     }
   };
 
@@ -343,7 +367,7 @@ export function MarketplaceBrowser({
                   isSaved={savedStatusMap[prod.id]}
                   isInCart={cartStatusMap[prod.id]}
                   isBuyerPortal={isBuyerPortal}
-                  userRole={isBuyerPortal ? "BUYER" : undefined}
+                  userRole={userRole || (isBuyerPortal ? "BUYER" : undefined)}
                   onToggleSave={() => handleToggleSave(prod.id)}
                   onAddToCart={() => handleAddToCart(prod.id)}
                 />

@@ -117,6 +117,7 @@ export default async function PublicMarketplacePage({
               currentSector={(validated.sector as any) || "ALL"}
               facets={facets}
               isBuyerPortal={false}
+              userRole={session?.role || null}
             />
           </MarketplaceShell>
         )}

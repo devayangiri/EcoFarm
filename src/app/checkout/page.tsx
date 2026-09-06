@@ -24,7 +24,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       const init = await CheckoutService.initiateCheckout(session.userId);
       sessionId = init.sessionId;
     } catch {
-      redirect("/cart");
+      redirect("/buyer/cart");
     }
   }
 
@@ -32,7 +32,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
   try {
     checkoutSession = await CheckoutService.getCheckoutSession(session.userId, sessionId!);
   } catch {
-    redirect("/cart");
+    redirect("/buyer/cart");
   }
 
   const userAddress = await prisma.address.findFirst({

@@ -110,6 +110,7 @@ export default async function BuyerMarketplacePage({
             currentSector="ALL"
             facets={facets}
             isBuyerPortal={true}
+            userRole="BUYER"
           />
         )}
       </div>

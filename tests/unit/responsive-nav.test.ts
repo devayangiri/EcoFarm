@@ -24,7 +24,7 @@ describe("Role-Aware Mobile Bottom Navigation", () => {
     expect(tabs.map((t) => t.href)).toEqual([
       "/marketplace",
       "/buyer/saved",
-      "/cart",
+      "/buyer/cart",
       "/buyer/orders",
       "/messages",
     ]);

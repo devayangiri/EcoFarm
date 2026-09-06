@@ -392,6 +392,26 @@ export class BuyerService {
         prisma.savedProduct.count({ where: { buyerId } }),
       ]);
 
+      let cartProductIds = new Set<string>();
+      if (FEATURES.CART_AND_CHECKOUT && saved.length > 0) {
+        try {
+          const cart = await prisma.cart.findFirst({
+            where: { buyerId, status: "ACTIVE" },
+            select: {
+              items: {
+                where: { productId: { in: saved.map((s) => s.product.id) } },
+                select: { productId: true },
+              },
+            },
+          });
+          if (cart?.items) {
+            cartProductIds = new Set(cart.items.map((it) => it.productId));
+          }
+        } catch {
+          cartProductIds = new Set<string>();
+        }
+      }
+
       const items = saved.map((s) => ({
         savedId: s.id,
         savedAt: s.createdAt,
@@ -413,6 +433,7 @@ export class BuyerService {
           imageUrl: s.product.images[0]?.url || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
           sellerName: s.product.seller.fullName,
           isSellerVerified: s.product.seller.farmerProfile?.isVerified ?? false,
+          isInCart: cartProductIds.has(s.product.id),
         },
       }));
 

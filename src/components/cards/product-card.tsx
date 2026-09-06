@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, ShieldCheck, Sprout, Waves, Bookmark, ShoppingCart, Check } from "lucide-react";
+import { MapPin, ShieldCheck, Sprout, Waves, Bookmark, ShoppingCart, Check, AlertCircle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,7 @@ export function ProductCard({
   const router = useRouter();
   const [inCart, setInCart] = useState(isInCart);
   const [isAdding, setIsAdding] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
 
   useEffect(() => {
     setInCart(isInCart);
@@ -76,37 +77,40 @@ export function ProductCard({
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setCardError(null);
 
+    // Unauthenticated Guest -> redirect to login
     if (!userRole && !isBuyerPortal) {
       router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
       return;
     }
 
+    // Role check: Non-buyer role attempting to buy
+    if (userRole && userRole !== "BUYER" && !isBuyerPortal) {
+      setCardError("Only registered commercial buyers can place wholesale orders");
+      return;
+    }
+
     if (inCart) return;
 
-    setIsAdding(true);
-    try {
-      if (onAddToCart) {
+    if (isOutOfStock) {
+      setCardError("Commodity lot is currently out of stock");
+      return;
+    }
+
+    if (onAddToCart) {
+      setIsAdding(true);
+      try {
         await onAddToCart(id);
-      } else {
-        const res = await fetch("/api/cart/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: id, quantity: moq || 1 }),
-        });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          throw new Error(json.message || "Failed to add to cart");
-        }
+        setInCart(true);
+      } catch (err: any) {
+        console.error("[ProductCard] Add to cart error:", err);
+        setCardError(err.message || "Failed to add commodity lot to cart");
+      } finally {
+        setIsAdding(false);
       }
-      setInCart(true);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("cart-updated"));
-      }
-    } catch (err) {
-      console.error("[ProductCard] Add to cart error:", err);
-    } finally {
-      setIsAdding(false);
+    } else {
+      router.push(`/marketplace/${targetIdentifier}`);
     }
   };
 
@@ -285,27 +289,45 @@ export function ProductCard({
                 size="sm"
                 onClick={handleAddToCart}
                 isLoading={isAdding}
-                disabled={isOutOfStock}
+                disabled={isOutOfStock || isAdding}
                 className="flex-1 text-[11px] h-8 px-2 gap-1 font-semibold"
               >
                 <ShoppingCart className="h-3 w-3" />
-                <span className="truncate">Add to Cart</span>
+                <span className="truncate">{isAdding ? "Adding..." : "Add to Cart"}</span>
               </Button>
             )
           ) : !userRole ? (
-            <Link href={`/login?callbackUrl=/marketplace/${targetIdentifier}`} className="flex-1">
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={isOutOfStock}
-                className="w-full text-[11px] h-8 px-2 gap-1 font-semibold"
-              >
-                <ShoppingCart className="h-3 w-3" />
-                <span className="truncate">Add to Cart</span>
-              </Button>
-            </Link>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className="flex-1 text-[11px] h-8 px-2 gap-1 font-semibold"
+            >
+              <ShoppingCart className="h-3 w-3" />
+              <span className="truncate">Add to Cart</span>
+            </Button>
           ) : null}
         </div>
+
+        {cardError && (
+          <div className="mt-1.5 p-1.5 rounded bg-status-error/10 border border-status-error/20 text-[10px] text-status-error flex items-start gap-1 animate-fadeIn">
+            <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
+            <span className="leading-tight flex-1">{cardError}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCardError(null);
+              }}
+              className="text-status-error/70 hover:text-status-error ml-0.5"
+              aria-label="Dismiss error"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </div>
+        )}
       </div>
     </Card>
   );

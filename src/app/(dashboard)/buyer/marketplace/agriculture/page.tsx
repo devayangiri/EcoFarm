@@ -106,6 +106,7 @@ export default async function BuyerAgriMarketplacePage({
             currentSector="AGRICULTURE"
             facets={facets}
             isBuyerPortal={true}
+            userRole="BUYER"
           />
         )}
       </div>

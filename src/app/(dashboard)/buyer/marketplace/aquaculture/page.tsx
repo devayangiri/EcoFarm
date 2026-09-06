@@ -106,6 +106,7 @@ export default async function BuyerAquaMarketplacePage({
             currentSector="AQUACULTURE"
             facets={facets}
             isBuyerPortal={true}
+            userRole="BUYER"
           />
         )}
       </div>
