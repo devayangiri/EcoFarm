@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -158,6 +158,64 @@ describe("Phase 4: Stitch UI Components Test Suite", () => {
       expect(screen.getByText(/Swarna Paddy Grain/i)).toBeInTheDocument();
       expect(screen.getByText(/Ramesh Farmer/i)).toBeInTheDocument();
       expect(screen.getByText(/Purba Bardhaman, West Bengal/i)).toBeInTheDocument();
+    });
+
+    it("should call onAddToCart exactly once when Add to Cart is clicked and keep detail navigation isolated", async () => {
+      const onAddToCartMock = vi.fn();
+      render(
+        <ProductCard
+          id="p-101"
+          slug="swarna-paddy-grain"
+          title="Swarna Paddy Grain"
+          sector="AGRICULTURE"
+          category="Cereals"
+          pricePerUnit={2180}
+          unit="QUINTAL"
+          availableStock={500}
+          sellerName="Ramesh Farmer"
+          locationDistrict="Purba Bardhaman"
+          locationState="West Bengal"
+          userRole="BUYER"
+          onAddToCart={onAddToCartMock}
+        />
+      );
+
+      // Verify product info is wrapped in link pointing to /marketplace/swarna-paddy-grain
+      const detailLink = screen.getByRole("link", { name: /View details for Swarna Paddy Grain/i });
+      expect(detailLink).toHaveAttribute("href", "/marketplace/swarna-paddy-grain");
+
+      // Verify Add to Cart button is outside the link and clickable
+      const addButton = screen.getByRole("button", { name: /Add to Cart/i });
+      expect(addButton).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(addButton);
+      });
+      expect(onAddToCartMock).toHaveBeenCalledTimes(1);
+      expect(onAddToCartMock).toHaveBeenCalledWith("p-101");
+      expect(await screen.findByText(/In Cart/i)).toBeInTheDocument();
+    });
+
+    it("should hide Add to Cart button for FARMER role and only display Details", () => {
+      render(
+        <ProductCard
+          id="p-102"
+          slug="fresh-wheat"
+          title="Fresh Wheat Lot"
+          sector="AGRICULTURE"
+          category="Grains"
+          pricePerUnit={2400}
+          unit="QUINTAL"
+          availableStock={100}
+          sellerName="Ramesh Farmer"
+          locationDistrict="Purba Bardhaman"
+          locationState="West Bengal"
+          userRole="FARMER"
+        />
+      );
+
+      expect(screen.queryByRole("button", { name: /Add to Cart/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Details/i })).toBeInTheDocument();
     });
 
     it("should render StatCard with title, metric, and percentage trend", () => {

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, ShieldCheck, Sprout, Waves, Bookmark, ShoppingCart, Check, AlertCircle, X } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -74,10 +74,17 @@ export function ProductCard({
   const displayImage = imageUrl || fallback.src;
   const isFallback = !imageUrl;
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setCardError(null);
+
+    if (isAdding) return;
+    if (inCart) return;
+
+    if (isOutOfStock) {
+      setCardError("Commodity lot is currently out of stock");
+      return;
+    }
 
     // Unauthenticated Guest -> redirect to login
     if (!userRole && !isBuyerPortal) {
@@ -91,32 +98,30 @@ export function ProductCard({
       return;
     }
 
-    if (inCart) return;
+    setIsAdding(true);
+    setCardError(null);
 
-    if (isOutOfStock) {
-      setCardError("Commodity lot is currently out of stock");
-      return;
-    }
-
-    if (onAddToCart) {
-      setIsAdding(true);
-      try {
+    try {
+      if (onAddToCart) {
         await onAddToCart(id);
-        setInCart(true);
-      } catch (err: any) {
-        console.error("[ProductCard] Add to cart error:", err);
-        setCardError(err.message || "Failed to add commodity lot to cart");
-      } finally {
-        setIsAdding(false);
       }
-    } else {
-      router.push(`/marketplace/${targetIdentifier}`);
+      setInCart(true);
+    } catch (err: any) {
+      console.error("[ProductCard] Add to cart error:", err);
+      setCardError(err.message || "Failed to add commodity lot to cart");
+    } finally {
+      setIsAdding(false);
     }
   };
 
   return (
-    <Card className="group overflow-hidden rounded-xl border border-surface-dim bg-white transition-all hover:shadow-lg hover:border-brand-primary/30 flex flex-col justify-between">
-      <div>
+    <article className="group overflow-hidden rounded-xl border border-surface-dim bg-white transition-all hover:shadow-lg hover:border-brand-primary/30 flex flex-col justify-between">
+      {/* Clickable Product Info Link (Image, Title, Specs, Seller, Location) */}
+      <Link
+        href={`/marketplace/${targetIdentifier}`}
+        className="block focus:outline-none"
+        aria-label={`View details for ${title}`}
+      >
         {/* Image & Sector Badge */}
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-low">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -137,7 +142,7 @@ export function ProductCard({
           )}
 
           {/* Top Badges & Save Button */}
-          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
+          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
             <Badge variant={sector === "AGRICULTURE" ? "primary" : "secondary"} size="sm">
               {sector === "AGRICULTURE" ? (
                 <>
@@ -160,7 +165,7 @@ export function ProductCard({
                   e.stopPropagation();
                   onToggleSave(id);
                 }}
-                className={`pointer-events-auto p-1.5 rounded-full backdrop-blur-md transition-all ${
+                className={`p-1.5 rounded-full backdrop-blur-md transition-all ${
                   isSaved
                     ? "bg-brand-primary text-white shadow-sm"
                     : "bg-white/80 text-slate-neutral hover:bg-white hover:text-on-surface shadow-xs"
@@ -189,11 +194,9 @@ export function ProductCard({
               <span className="text-slate-neutral/70 text-[10px]">No reviews yet</span>
             </div>
 
-            <Link href={`/marketplace/${targetIdentifier}`} className="block">
-              <h3 className="font-heading text-sm sm:text-base font-bold text-on-surface line-clamp-1 group-hover:text-brand-primary transition-colors">
-                {title}
-              </h3>
-            </Link>
+            <h3 className="font-heading text-sm sm:text-base font-bold text-on-surface line-clamp-1 group-hover:text-brand-primary transition-colors">
+              {title}
+            </h3>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-neutral">
               {variety && (
@@ -221,9 +224,9 @@ export function ProductCard({
             </div>
           </div>
         </CardContent>
-      </div>
+      </Link>
 
-      {/* Footer Pricing & CTA */}
+      {/* Footer Pricing & Independent CTA (Outside the Link) */}
       <div className="p-4 pt-0 flex flex-col gap-2.5 border-t border-surface-low mt-2">
         <div className="flex items-baseline justify-between pt-2">
           <div>
@@ -248,10 +251,15 @@ export function ProductCard({
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Independent Controls */}
         <div className="flex items-center gap-2 pt-1">
-          <Link href={`/marketplace/${targetIdentifier}`} className="flex-1">
+          <Link
+            href={`/marketplace/${targetIdentifier}`}
+            className="flex-1"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
+              type="button"
               variant="outline"
               size="sm"
               className="w-full text-xs font-semibold gap-1"
@@ -264,6 +272,7 @@ export function ProductCard({
             inCart ? (
               <div className="flex items-center gap-1.5 flex-1">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   disabled
@@ -272,8 +281,12 @@ export function ProductCard({
                   <Check className="h-3 w-3 mr-1 text-status-success shrink-0" />
                   <span className="truncate">In Cart</span>
                 </Button>
-                <Link href="/buyer/cart">
+                <Link
+                  href="/buyer/cart"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Button
+                    type="button"
                     variant="primary"
                     size="sm"
                     className="text-[11px] h-8 px-2.5 font-semibold shrink-0"
@@ -285,6 +298,7 @@ export function ProductCard({
               </div>
             ) : (
               <Button
+                type="button"
                 variant="primary"
                 size="sm"
                 onClick={handleAddToCart}
@@ -298,6 +312,7 @@ export function ProductCard({
             )
           ) : !userRole ? (
             <Button
+              type="button"
               variant="primary"
               size="sm"
               onClick={handleAddToCart}
@@ -311,7 +326,10 @@ export function ProductCard({
         </div>
 
         {cardError && (
-          <div className="mt-1.5 p-1.5 rounded bg-status-error/10 border border-status-error/20 text-[10px] text-status-error flex items-start gap-1 animate-fadeIn">
+          <div
+            className="mt-1.5 p-1.5 rounded bg-status-error/10 border border-status-error/20 text-[10px] text-status-error flex items-start gap-1 animate-fadeIn"
+            onClick={(e) => e.stopPropagation()}
+          >
             <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
             <span className="leading-tight flex-1">{cardError}</span>
             <button
@@ -329,6 +347,6 @@ export function ProductCard({
           </div>
         )}
       </div>
-    </Card>
+    </article>
   );
 }
