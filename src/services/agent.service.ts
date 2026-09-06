@@ -640,74 +640,86 @@ export class AgentService {
    * Lead CRM: Get leads list
    */
   static async getLeads(userId: string, input: AgentSearchFilterInput) {
-    const profile = await this.getOrCreateAgentProfile(userId);
-    const search = input.search;
-    const status = input.status;
-    const sector = input.sector;
-    const page = input.page || 1;
-    const pageSize = input.pageSize || 20;
-    const skip = (page - 1) * pageSize;
+    try {
+      const profile = await this.getOrCreateAgentProfile(userId);
+      const search = input.search;
+      const status = input.status;
+      const sector = input.sector;
+      const page = input.page || 1;
+      const pageSize = input.pageSize || 20;
+      const skip = (page - 1) * pageSize;
 
-    const where: Prisma.AgentLeadWhereInput = {
-      agentProfileId: profile.id,
-    };
+      const where: Prisma.AgentLeadWhereInput = {
+        agentProfileId: profile.id,
+      };
 
-    if (status && status !== "ALL") {
-      where.stage = status as LeadStage;
-    }
+      if (status && status !== "ALL") {
+        where.stage = status as LeadStage;
+      }
 
-    if (sector && sector !== "ALL") {
-      where.targetSector = sector as Sector;
-    }
+      if (sector && sector !== "ALL") {
+        where.targetSector = sector as Sector;
+      }
 
-    if (search) {
-      where.OR = [
-        { contactName: { contains: search, mode: "insensitive" } },
-        { contactPhone: { contains: search, mode: "insensitive" } },
-        { contactEmail: { contains: search, mode: "insensitive" } },
-      ];
-    }
+      if (search) {
+        where.OR = [
+          { contactName: { contains: search, mode: "insensitive" } },
+          { contactPhone: { contains: search, mode: "insensitive" } },
+          { contactEmail: { contains: search, mode: "insensitive" } },
+        ];
+      }
 
-    const [leads, total] = await Promise.all([
-      prisma.agentLead.findMany({
-        where,
-        skip,
-        take: pageSize,
-        orderBy: { updatedAt: "desc" },
-        include: {
-          activities: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
+      const [leads, total] = await Promise.all([
+        prisma.agentLead.findMany({
+          where,
+          skip,
+          take: pageSize,
+          orderBy: { updatedAt: "desc" },
+          include: {
+            activities: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
           },
+        }),
+        prisma.agentLead.count({ where }),
+      ]);
+
+      const formatted = leads.map((l) => ({
+        id: l.id,
+        contactName: l.contactName,
+        contactPhone: l.contactPhone,
+        contactEmail: l.contactEmail,
+        source: l.source,
+        targetSector: l.targetSector,
+        stage: l.stage,
+        estimatedValue: l.estimatedValue ? l.estimatedValue.toNumber() : null,
+        notes: l.notes,
+        lastActivity: l.activities[0] || null,
+        createdAt: l.createdAt,
+        updatedAt: l.updatedAt,
+      }));
+
+      return {
+        items: formatted,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(total / pageSize) || 1,
         },
-      }),
-      prisma.agentLead.count({ where }),
-    ]);
-
-    const formatted = leads.map((l) => ({
-      id: l.id,
-      contactName: l.contactName,
-      contactPhone: l.contactPhone,
-      contactEmail: l.contactEmail,
-      source: l.source,
-      targetSector: l.targetSector,
-      stage: l.stage,
-      estimatedValue: l.estimatedValue ? l.estimatedValue.toNumber() : null,
-      notes: l.notes,
-      lastActivity: l.activities[0] || null,
-      createdAt: l.createdAt,
-      updatedAt: l.updatedAt,
-    }));
-
-    return {
-      items: formatted,
-      pagination: {
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize) || 1,
-      },
-    };
+      };
+    } catch {
+      return {
+        items: [],
+        pagination: {
+          total: 0,
+          page: input.page || 1,
+          pageSize: input.pageSize || 20,
+          totalPages: 1,
+        },
+      };
+    }
   }
 
   /**
@@ -944,52 +956,58 @@ export class AgentService {
     userId: string,
     filter?: { status?: string; view?: "today" | "upcoming" | "overdue" | "completed" }
   ) {
-    const profile = await this.getOrCreateAgentProfile(userId);
-    const now = new Date();
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    try {
+      const profile = await this.getOrCreateAgentProfile(userId);
+      const now = new Date();
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
 
-    const where: Prisma.AgentTaskWhereInput = {
-      agentProfileId: profile.id,
-    };
+      const where: Prisma.AgentTaskWhereInput = {
+        agentProfileId: profile.id,
+      };
 
-    if (filter?.view === "today") {
-      where.status = { in: ["TODO", "IN_PROGRESS"] };
-      where.dueDate = { lte: todayEnd };
-    } else if (filter?.view === "upcoming") {
-      where.status = { in: ["TODO", "IN_PROGRESS"] };
-      where.dueDate = { gt: todayEnd };
-    } else if (filter?.view === "overdue") {
-      where.status = { in: ["TODO", "IN_PROGRESS"] };
-      where.dueDate = { lt: now };
-    } else if (filter?.view === "completed") {
-      where.status = "COMPLETED";
+      if (filter?.view === "today") {
+        where.status = { in: ["TODO", "IN_PROGRESS"] };
+        where.dueDate = { lte: todayEnd };
+      } else if (filter?.view === "upcoming") {
+        where.status = { in: ["TODO", "IN_PROGRESS"] };
+        where.dueDate = { gt: todayEnd };
+      } else if (filter?.view === "overdue") {
+        where.status = { in: ["TODO", "IN_PROGRESS"] };
+        where.dueDate = { lt: now };
+      } else if (filter?.view === "completed") {
+        where.status = "COMPLETED";
+      }
+
+      const tasks = await prisma.agentTask.findMany({
+        where,
+        orderBy: { dueDate: "asc" },
+        include: {
+          linkedLead: { select: { id: true, contactName: true } },
+        },
+      });
+
+      return {
+        tasks: tasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          dueDate: t.dueDate,
+          priority: t.priority,
+          status: t.status,
+          isOverdue: t.status !== "COMPLETED" && new Date(t.dueDate) < now,
+          linkedLead: t.linkedLead,
+          linkedTargetType: t.linkedTargetType,
+          linkedTargetUserId: t.linkedTargetUserId,
+          completedAt: t.completedAt,
+          createdAt: t.createdAt,
+        })),
+      };
+    } catch {
+      return {
+        tasks: [],
+      };
     }
-
-    const tasks = await prisma.agentTask.findMany({
-      where,
-      orderBy: { dueDate: "asc" },
-      include: {
-        linkedLead: { select: { id: true, contactName: true } },
-      },
-    });
-
-    return {
-      tasks: tasks.map((t) => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        dueDate: t.dueDate,
-        priority: t.priority,
-        status: t.status,
-        isOverdue: t.status !== "COMPLETED" && new Date(t.dueDate) < now,
-        linkedLead: t.linkedLead,
-        linkedTargetType: t.linkedTargetType,
-        linkedTargetUserId: t.linkedTargetUserId,
-        completedAt: t.completedAt,
-        createdAt: t.createdAt,
-      })),
-    };
   }
 
   /**
@@ -1440,47 +1458,59 @@ export class AgentService {
    * Performance & Analytics
    */
   static async getPerformance(userId: string) {
-    const profile = await this.getOrCreateAgentProfile(userId);
+    try {
+      const profile = await this.getOrCreateAgentProfile(userId);
 
-    const [
-      totalAssigned,
-      totalLeads,
-      convertedLeads,
-      completedTasks,
-      overdueTasks,
-      processedVerifications,
-    ] = await Promise.all([
-      prisma.agentAssignment.count({ where: { agentProfileId: profile.id } }),
-      prisma.agentLead.count({ where: { agentProfileId: profile.id } }),
-      prisma.agentLead.count({
-        where: { agentProfileId: profile.id, stage: "CONVERTED" },
-      }),
-      prisma.agentTask.count({
-        where: { agentProfileId: profile.id, status: "COMPLETED" },
-      }),
-      prisma.agentTask.count({
-        where: {
-          agentProfileId: profile.id,
-          status: { not: "COMPLETED" },
-          dueDate: { lt: new Date() },
-        },
-      }),
-      prisma.verificationRequest.count({
-        where: { reviewerId: userId, status: { in: ["APPROVED", "REJECTED"] } },
-      }),
-    ]);
+      const [
+        totalAssigned,
+        totalLeads,
+        convertedLeads,
+        completedTasks,
+        overdueTasks,
+        processedVerifications,
+      ] = await Promise.all([
+        prisma.agentAssignment.count({ where: { agentProfileId: profile.id } }),
+        prisma.agentLead.count({ where: { agentProfileId: profile.id } }),
+        prisma.agentLead.count({
+          where: { agentProfileId: profile.id, stage: "CONVERTED" },
+        }),
+        prisma.agentTask.count({
+          where: { agentProfileId: profile.id, status: "COMPLETED" },
+        }),
+        prisma.agentTask.count({
+          where: {
+            agentProfileId: profile.id,
+            status: { not: "COMPLETED" },
+            dueDate: { lt: new Date() },
+          },
+        }),
+        prisma.verificationRequest.count({
+          where: { reviewerId: userId, status: { in: ["APPROVED", "REJECTED"] } },
+        }),
+      ]);
 
-    const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
+      const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
-    return {
-      totalAssigned,
-      totalLeads,
-      convertedLeads,
-      conversionRate: Math.round(conversionRate * 10) / 10,
-      completedTasks,
-      overdueTasks,
-      processedVerifications,
-    };
+      return {
+        totalAssigned,
+        totalLeads,
+        convertedLeads,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+        completedTasks,
+        overdueTasks,
+        processedVerifications,
+      };
+    } catch {
+      return {
+        totalAssigned: 0,
+        totalLeads: 0,
+        convertedLeads: 0,
+        conversionRate: 0,
+        completedTasks: 0,
+        overdueTasks: 0,
+        processedVerifications: 0,
+      };
+    }
   }
 
   /**
