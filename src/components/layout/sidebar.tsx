@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -123,7 +126,9 @@ export function getSidebarNavItems(userRole: string = "FARMER") {
   }
 }
 
-export function Sidebar({ currentPath = "/", userRole = "FARMER" }: SidebarProps) {
+export function Sidebar({ currentPath, userRole = "FARMER" }: SidebarProps) {
+  const pathname = usePathname();
+  const activePath = currentPath || pathname || "/";
   const navItems = getSidebarNavItems(userRole);
 
   return (
@@ -139,7 +144,7 @@ export function Sidebar({ currentPath = "/", userRole = "FARMER" }: SidebarProps
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = isNavItemActive(currentPath, item.href);
+            const isActive = isNavItemActive(activePath, item.href);
             return (
               <Link
                 key={item.href}
