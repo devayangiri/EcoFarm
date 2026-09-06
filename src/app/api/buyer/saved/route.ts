@@ -46,3 +46,31 @@ export async function POST(request: NextRequest) {
     return handleError(error);
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await requireRole("BUYER");
+    const { searchParams } = new URL(request.url);
+    let productId = searchParams.get("productId");
+    if (!productId) {
+      const body = await request.json().catch(() => null);
+      productId = body?.productId;
+    }
+
+    if (!productId) {
+      return NextResponse.json(
+        { success: false, error: { code: "BAD_REQUEST", message: "productId is required" } },
+        { status: 400 }
+      );
+    }
+
+    await BuyerService.unsaveProduct(user.userId, productId);
+
+    return NextResponse.json({
+      success: true,
+      message: "Product removed from your favorites",
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+}
