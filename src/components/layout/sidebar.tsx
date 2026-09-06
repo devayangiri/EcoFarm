@@ -29,6 +29,30 @@ export interface SidebarProps {
   userRole?: string;
 }
 
+export function isNavItemActive(currentPath: string = "/", itemHref: string): boolean {
+  if (!currentPath || !itemHref) return false;
+
+  const normalizedCurrent = currentPath === "/" ? "/" : currentPath.replace(/\/$/, "");
+  const normalizedItem = itemHref === "/" ? "/" : itemHref.replace(/\/$/, "");
+
+  if (normalizedCurrent === normalizedItem) return true;
+
+  // Root dashboards must match exactly or with query params, not as prefix to child routes
+  const rootDashboards = ["/farmer", "/buyer", "/provider", "/agent", "/admin", "/"];
+  if (rootDashboards.includes(normalizedItem)) {
+    return (
+      normalizedCurrent === normalizedItem ||
+      normalizedCurrent.startsWith(`${normalizedItem}?`)
+    );
+  }
+
+  // Nested workspace routes (e.g. /farmer/products -> /farmer/products/new, /farmer/products/123)
+  return (
+    normalizedCurrent.startsWith(`${normalizedItem}/`) ||
+    normalizedCurrent.startsWith(`${normalizedItem}?`)
+  );
+}
+
 export function getSidebarNavItems(userRole: string = "FARMER") {
   const normalizedRole = (userRole || "FARMER").toUpperCase();
 
@@ -38,10 +62,8 @@ export function getSidebarNavItems(userRole: string = "FARMER") {
         { label: "Dashboard", href: "/farmer", icon: LayoutDashboard },
         { label: "Products / Listings", href: "/farmer/products", icon: Package },
         { label: "Manage Farms", href: "/farmer/farms", icon: Sprout },
-        { label: "Orders & Cart", href: "/farmer/orders", icon: ShoppingCart },
-        { label: "Business Network", href: "/network", icon: Users },
-        { label: "Services & Quotes", href: "/services", icon: Wrench },
-        { label: "Verifications", href: "/farmer/profile", icon: FileCheck },
+        { label: "Orders", href: "/farmer/orders", icon: ShoppingCart },
+        { label: "Profile", href: "/farmer/profile", icon: User },
         { label: "Analytics", href: "/farmer/analytics", icon: BarChart3 },
         { label: "Settings", href: "/settings", icon: Settings },
       ];
@@ -117,7 +139,7 @@ export function Sidebar({ currentPath = "/", userRole = "FARMER" }: SidebarProps
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPath === item.href;
+            const isActive = isNavItemActive(currentPath, item.href);
             return (
               <Link
                 key={item.href}

@@ -30,7 +30,7 @@ export default async function FarmerOrderDetailPage({ params }: FarmerOrderDetai
   const shipping = order.orderGroup.shippingAddressSnapshot as any;
 
   return (
-    <AppShell userRole="FARMER" userName={session?.fullName}>
+    <AppShell showSidebar userRole="FARMER" userName={session?.fullName} currentPath="/farmer/orders">
       <div className="py-6 max-w-stitch-container mx-auto space-y-6 text-left font-body max-w-4xl">
         <Link
           href="/farmer/orders"

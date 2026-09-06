@@ -54,18 +54,11 @@ test.describe("Farmer Navigation & CTA Functionality Regression", () => {
     await page.click("aside nav >> text=Manage Farms");
     await expect(page).toHaveURL(/\/farmer\/farms/);
 
-    await page.click("aside nav >> text=Orders & Cart");
+    await page.click("aside nav >> text=Orders");
     await expect(page).toHaveURL(/\/farmer\/orders/);
 
-    await page.click("aside nav >> text=Business Network");
-    await expect(page).toHaveURL(/\/network/);
-
     await page.goto("/farmer");
-    await page.click("aside nav >> text=Services & Quotes");
-    await expect(page).toHaveURL(/\/services/);
-
-    await page.goto("/farmer");
-    await page.click("aside nav >> text=Verifications");
+    await page.click("aside nav >> text=Profile");
     await expect(page).toHaveURL(/\/farmer\/profile/);
 
     await page.goto("/farmer");
@@ -75,6 +68,11 @@ test.describe("Farmer Navigation & CTA Functionality Regression", () => {
     await page.goto("/farmer");
     await page.click("aside nav >> text=Settings");
     await expect(page).toHaveURL(/\/settings/);
+
+    // Verify duplicate/future items are NOT present in Farmer sidebar
+    await expect(page.locator("aside nav >> text=Business Network")).not.toBeVisible();
+    await expect(page.locator("aside nav >> text=Services & Quotes")).not.toBeVisible();
+    await expect(page.locator("aside nav >> text=Orders & Cart")).not.toBeVisible();
   });
 
   test("3. Quick Operational Actions & Header CTA", async ({ page }) => {
