@@ -51,6 +51,30 @@ export class CartService {
   }
 
   /**
+   * Get active cart item count for a buyer
+   */
+  static async getCartItemCount(buyerId: string): Promise<number> {
+    if (!FEATURES.CART_AND_CHECKOUT) {
+      return 0;
+    }
+
+    try {
+      const cart = await prisma.cart.findFirst({
+        where: { buyerId, status: "ACTIVE" },
+        select: {
+          items: {
+            select: { id: true },
+          },
+        },
+      });
+
+      return cart?.items?.length ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
    * Get formatted buyer cart with authoritative pricing and seller grouping
    */
   static async getCart(buyerId: string) {

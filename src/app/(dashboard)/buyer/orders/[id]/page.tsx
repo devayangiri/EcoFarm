@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OrderTrackingTimeline } from "@/components/orders/order-tracking-timeline";
 import { formatCurrency } from "@/lib/utils";
-import { ChevronLeft, Building2 } from "lucide-react";
+import { ChevronLeft, Building2, Star } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -81,19 +81,33 @@ export default async function BuyerOrderDetailPage({ params }: OrderDetailPagePr
               {/* Items */}
               <div className="divide-y divide-surface-dim border border-surface-dim rounded-lg overflow-hidden">
                 {sub.items.map((it) => (
-                  <div key={it.id} className="p-3 flex items-center justify-between text-xs bg-surface-low">
-                    <div>
-                      <span className="font-bold text-on-surface block">{it.productTitleSnapshot}</span>
-                      <span className="text-slate-neutral">
-                        {formatCurrency(it.unitPrice.toNumber())}/{it.unitSnapshot}
-                      </span>
+                  <div key={it.id} className="p-3 text-xs bg-surface-low space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-on-surface block">{it.productTitleSnapshot}</span>
+                        <span className="text-slate-neutral">
+                          {formatCurrency(it.unitPrice.toNumber())}/{it.unitSnapshot}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-brand-primary block">
+                          {formatCurrency(it.totalPrice.toNumber())}
+                        </span>
+                        <span className="text-slate-neutral">{it.quantity.toString()} {it.unitSnapshot}</span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-mono font-bold text-brand-primary block">
-                        {formatCurrency(it.totalPrice.toNumber())}
-                      </span>
-                      <span className="text-slate-neutral">{it.quantity.toString()} {it.unitSnapshot}</span>
-                    </div>
+
+                    {(sub.status === "DELIVERED" || sub.status === "COMPLETED") && (
+                      <div className="pt-1 flex justify-end">
+                        <Link
+                          href={`/marketplace/${it.productId}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-primary hover:underline bg-white px-2 py-0.5 rounded border border-surface-dim"
+                        >
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+                          <span>Rate & Review Commodity</span>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

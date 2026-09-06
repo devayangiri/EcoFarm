@@ -1,14 +1,35 @@
 import React from "react";
 import { requireRole } from "@/lib/rbac";
+import { CartService } from "@/services/cart.service";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Clock } from "lucide-react";
+import { CartView } from "@/components/cart/cart-view";
 
 export const dynamic = "force-dynamic";
 
 export default async function BuyerCartPage() {
   const user = await requireRole("BUYER");
+
+  let cart = {
+    id: "",
+    buyerId: user.userId,
+    status: "ACTIVE",
+    sellerGroups: [],
+    summary: {
+      itemCount: 0,
+      totalUniqueSellers: 0,
+      subtotal: 0,
+      estimatedShipping: 0,
+      platformCommission: 0,
+      grandTotal: 0,
+    },
+  };
+
+  try {
+    cart = (await CartService.getCart(user.userId)) as any;
+  } catch (error) {
+    console.error("[BuyerCartPage] Error retrieving cart:", error);
+  }
 
   return (
     <AppShell showSidebar userRole="BUYER" userName={user.fullName} currentPath="/buyer/cart">
@@ -22,13 +43,7 @@ export default async function BuyerCartPage() {
           ]}
         />
 
-        <EmptyState
-          icon={Clock}
-          title="Wholesale Cart is coming soon."
-          description="Multi-vendor shopping cart, freight aggregation, and direct checkout are scheduled for Phase 8. Currently, buyers can explore listings and initiate direct inquiries with verified producers."
-          actionLabel="Explore Marketplace"
-          actionHref="/buyer/marketplace"
-        />
+        <CartView initialCart={cart} />
       </div>
     </AppShell>
   );

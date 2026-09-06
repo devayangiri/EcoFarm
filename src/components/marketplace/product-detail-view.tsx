@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ import {
   Check,
   Plus,
   Minus,
+  Star,
+  Zap,
+  Send,
 } from "lucide-react";
 
 export interface ProductDetailViewProps {
@@ -66,8 +69,43 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
   const [quantity, setQuantity] = useState(product.minimumOrderQuantity);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [cartError, setCartError] = useState<string | null>(null);
+
+  // Real Reviews & Ratings State
+  const [reviewsData, setReviewsData] = useState<{
+    reviews: Array<{ id: string; authorName: string; rating: number; comment: string | null; createdAt: string }>;
+    totalReviews: number;
+    averageRating: number;
+    eligibility: { isEligible: boolean; hasReviewed: boolean; reason?: string };
+  }>({
+    reviews: [],
+    totalReviews: 0,
+    averageRating: 0,
+    eligibility: { isEligible: false, hasReviewed: false },
+  });
+  const [isWritingReview, setIsWritingReview] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/reviews?productId=${product.id}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setReviewsData(json.data);
+      }
+    } catch {
+      // ignore
+    }
+  }, [product.id]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
 
   const images = product.images.length > 0
     ? product.images
@@ -122,10 +160,87 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
       }
 
       setCartSuccess(true);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("cart-updated"));
+      }
     } catch (err: any) {
       setCartError(err.message || "An error occurred");
     } finally {
       setIsAddingToCart(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!currentUserRole) {
+      router.push(`/login?callbackUrl=/marketplace/${product.id}`);
+      return;
+    }
+
+    if (currentUserRole !== "BUYER") {
+      setCartError("Only registered commercial buyers can place wholesale orders");
+      return;
+    }
+
+    setIsBuyingNow(true);
+    setCartError(null);
+
+    try {
+      const res = await fetch("/api/checkout/direct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          quantity,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to initiate Buy Now checkout");
+      }
+
+      router.push(`/checkout?sessionId=${json.data.sessionId}`);
+    } catch (err: any) {
+      setCartError(err.message || "An error occurred");
+    } finally {
+      setIsBuyingNow(false);
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUserRole || currentUserRole !== "BUYER") {
+      setReviewFeedback("Only commercial buyers with delivered orders can review");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewFeedback(null);
+
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          rating: newRating,
+          comment: newComment,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to submit review");
+      }
+
+      setReviewFeedback("Thank you! Your verified review has been submitted.");
+      setIsWritingReview(false);
+      setNewComment("");
+      await fetchReviews();
+    } catch (err: any) {
+      setReviewFeedback(err.message || "Error submitting review");
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -238,6 +353,20 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
                     <span className="font-semibold text-on-surface">Variety: {product.variety}</span>
                   </>
                 )}
+                {reviewsData.totalReviews > 0 ? (
+                  <>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded text-[11px]">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+                      {reviewsData.averageRating} ({reviewsData.totalReviews} {reviewsData.totalReviews === 1 ? "review" : "reviews"})
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>•</span>
+                    <span className="text-[11px] text-slate-400">No reviews yet</span>
+                  </>
+                )}
               </div>
               <h1 className="font-heading text-2xl font-extrabold text-on-surface">{product.title}</h1>
             </div>
@@ -269,6 +398,163 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
                 <span className="font-bold text-on-surface">{product.minimumOrderQuantity} {product.unit}</span>
               </div>
             </div>
+          </Card>
+
+          {/* Customer Reviews & Ratings */}
+          <Card className="border border-surface-dim bg-white shadow-sm p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-dim pb-4">
+              <div>
+                <h2 className="font-heading text-base font-bold text-on-surface">
+                  Verified Buyer Reviews & Ratings
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  {reviewsData.totalReviews > 0 ? (
+                    <>
+                      <div className="flex items-center gap-1 text-amber-500">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= Math.round(reviewsData.averageRating)
+                                ? "fill-amber-400 text-amber-500"
+                                : "text-slate-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-heading font-bold text-sm text-on-surface">
+                        {reviewsData.averageRating} out of 5
+                      </span>
+                      <span className="text-xs text-slate-neutral">
+                        ({reviewsData.totalReviews} {reviewsData.totalReviews === 1 ? "review" : "reviews"})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-neutral">
+                      No customer reviews yet for this lot.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {currentUserRole === "BUYER" && reviewsData.eligibility?.isEligible && !isWritingReview && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsWritingReview(true)}
+                  leftIcon={<Star className="h-3.5 w-3.5" />}
+                >
+                  Write a Review
+                </Button>
+              )}
+            </div>
+
+            {reviewFeedback && (
+              <Alert variant={reviewFeedback.includes("Thank you") ? "success" : "error"} onDismiss={() => setReviewFeedback(null)}>
+                {reviewFeedback}
+              </Alert>
+            )}
+
+            {/* Review Submission Form */}
+            {isWritingReview && (
+              <form onSubmit={handleSubmitReview} className="p-4 bg-surface-low rounded-lg border border-surface-dim space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-xs text-on-surface">
+                    Your Rating for {product.title}
+                  </span>
+                  <div className="flex items-center gap-1 cursor-pointer">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewRating(star)}
+                        className="p-1 hover:scale-110 transition-transform"
+                      >
+                        <Star
+                          className={`h-5 w-5 ${
+                            star <= newRating
+                              ? "fill-amber-400 text-amber-500"
+                              : "text-slate-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-neutral mb-1">
+                    Review Comments (optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Share details on produce quality, moisture, packaging, and dispatch speed..."
+                    className="w-full text-xs p-2.5 rounded-lg border border-surface-dim bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsWritingReview(false)}
+                    disabled={isSubmittingReview}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    isLoading={isSubmittingReview}
+                    leftIcon={<Send className="h-3.5 w-3.5" />}
+                  >
+                    Submit Review
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Reviews List */}
+            {reviewsData.reviews.length > 0 ? (
+              <div className="divide-y divide-surface-dim space-y-4 pt-1">
+                {reviewsData.reviews.map((r) => (
+                  <div key={r.id} className="pt-4 first:pt-0 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-on-surface">{r.authorName}</span>
+                        <Badge variant="success" size="sm">Verified Purchase</Badge>
+                      </div>
+                      <span className="text-[11px] text-slate-neutral">
+                        {new Date(r.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-amber-500">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-3 w-3 ${
+                            star <= r.rating ? "fill-amber-400 text-amber-500" : "text-slate-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {r.comment && (
+                      <p className="text-slate-700 leading-relaxed pt-0.5">{r.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-xs text-slate-neutral bg-surface-low rounded-lg border border-dashed border-surface-dim">
+                No customer reviews yet. Verified commercial buyers can review this commodity after delivery.
+              </div>
+            )}
           </Card>
         </div>
 
@@ -339,16 +625,29 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
                   </div>
                 </div>
 
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="w-full"
-                  onClick={handleAddToCart}
-                  isLoading={isAddingToCart}
-                  leftIcon={cartSuccess ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
-                >
-                  {cartSuccess ? "Added to Cart" : "Add Lot to Cart"}
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleAddToCart}
+                    isLoading={isAddingToCart}
+                    leftIcon={cartSuccess ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                  >
+                    {cartSuccess ? "Added to Cart" : "Add Lot to Cart"}
+                  </Button>
+
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleBuyNow}
+                    isLoading={isBuyingNow}
+                    leftIcon={<Zap className="h-4 w-4" />}
+                  >
+                    Buy Now
+                  </Button>
+                </div>
               </div>
             )}
           </Card>

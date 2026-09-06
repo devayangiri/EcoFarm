@@ -69,16 +69,61 @@ export class BuyerService {
       }),
     ]);
 
-    // 2. Future-phase features (CASE A: feature-gated)
     let savedCount: number | string = "Coming Soon";
     let requirementsCount: number | string = "Coming Soon";
     let recentRequirements: any[] = [];
+    let cartItemsCount: number = 0;
+    let activeOrdersCount: number = 0;
+    let recentOrders: any[] = [];
 
     if (FEATURES.SAVED_PRODUCTS) {
       try {
         savedCount = await prisma.savedProduct.count({ where: { buyerId } });
       } catch {
         savedCount = 0;
+      }
+    }
+
+    if (FEATURES.CART_AND_CHECKOUT) {
+      try {
+        const cart = await prisma.cart.findFirst({
+          where: { buyerId, status: "ACTIVE" },
+          select: {
+            items: { select: { id: true } },
+          },
+        });
+        cartItemsCount = cart?.items?.length ?? 0;
+
+        activeOrdersCount = await prisma.orderGroup.count({
+          where: { buyerId },
+        });
+
+        const orders = await prisma.orderGroup.findMany({
+          where: { buyerId },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+          include: {
+            sellerOrders: {
+              include: {
+                seller: { select: { fullName: true } },
+                items: true,
+              },
+            },
+          },
+        });
+
+        recentOrders = orders.map((o) => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          totalAmount: o.totalAmount.toNumber(),
+          status: o.status,
+          createdAt: o.createdAt,
+          subOrderCount: o.sellerOrders.length,
+        }));
+      } catch {
+        cartItemsCount = 0;
+        activeOrdersCount = 0;
+        recentOrders = [];
       }
     }
 
@@ -115,12 +160,16 @@ export class BuyerService {
         activeRequirements: requirementsCount,
         productInquiries: inquiriesCount,
         connectedSuppliers: 0,
+        cartItems: cartItemsCount,
+        activeOrders: activeOrdersCount,
       },
       features: {
         isSavedProductsAvailable: FEATURES.SAVED_PRODUCTS,
         isRequirementsAvailable: FEATURES.BUYER_REQUIREMENTS,
+        isCartAvailable: FEATURES.CART_AND_CHECKOUT,
       },
       recentRequirements,
+      recentOrders,
       recommendedProducts: (recommendedProducts || []).map((p) => ({
         id: p.id,
         slug: p.slug,

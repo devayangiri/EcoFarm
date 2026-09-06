@@ -16,6 +16,7 @@ import {
   User,
   ShieldCheck,
   ArrowRight,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +25,7 @@ export interface HeaderProps {
   userName?: string;
   unreadNotifications?: number;
   unreadMessages?: number;
+  cartItemCount?: number;
   currentPath?: string;
 }
 
@@ -32,6 +34,7 @@ export function Header({
   userName = "Welcome",
   unreadNotifications = 0,
   unreadMessages = 0,
+  cartItemCount = 0,
   currentPath,
 }: HeaderProps) {
   const pathname = usePathname();
@@ -40,7 +43,32 @@ export function Header({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [headerSearch, setHeaderSearch] = useState("");
+  const [cartCount, setCartCount] = useState(cartItemCount);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync cartCount for BUYER role
+  useEffect(() => {
+    setCartCount(cartItemCount);
+  }, [cartItemCount]);
+
+  useEffect(() => {
+    if (userRole?.toUpperCase() === "BUYER") {
+      const fetchCartCount = async () => {
+        try {
+          const res = await fetch("/api/cart/count");
+          const data = await res.json();
+          if (data?.success && typeof data?.count === "number") {
+            setCartCount(data.count);
+          }
+        } catch {
+          // ignore network error
+        }
+      };
+      fetchCartCount();
+      window.addEventListener("cart-updated", fetchCartCount);
+      return () => window.removeEventListener("cart-updated", fetchCartCount);
+    }
+  }, [userRole, pathname]);
 
   // Sync headerSearch with URL query parameter
   useEffect(() => {
@@ -240,6 +268,22 @@ export function Header({
 
           {isAuthenticated ? (
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Shopping Cart Icon (Buyer Only) */}
+              {userRole?.toUpperCase() === "BUYER" && (
+                <Link
+                  href="/buyer/cart"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-surface-dim bg-white text-slate-neutral hover:text-brand-primary hover:bg-surface-low hover:border-brand-primary/30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  aria-label={`Shopping Cart (${cartCount} items)`}
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-1 text-[9px] font-bold text-white shadow-sm">
+                      {cartCount > 9 ? "9+" : cartCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+
               {/* Notification Icon */}
               <Link
                 href="/notifications"

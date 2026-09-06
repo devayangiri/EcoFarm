@@ -95,7 +95,7 @@ export function CheckoutFlow({
     pincode: defaultAddress?.pincode || "700001",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER" | "MOCK">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("COD");
 
   const updateAddress = (field: string, value: string) => {
     setShippingAddress((prev) => ({ ...prev, [field]: value }));
@@ -265,39 +265,64 @@ export function CheckoutFlow({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              {[
-                {
-                  id: "COD",
-                  title: "Cash on Delivery / Warehouse Unloading (COD)",
-                  desc: "Inspect quality and pay freight agent upon weighbridge verification.",
-                },
-                {
-                  id: "BANK_TRANSFER",
-                  title: "RTGS / Direct Bank Transfer to Escrow",
-                  desc: "Funds held securely until shipment is received and verified.",
-                },
-                {
-                  id: "MOCK",
-                  title: "Instant Mock Settlement (Sandbox Gateway)",
-                  desc: "Simulate immediate digital payment confirmation for test checkout.",
-                },
-              ].map((opt) => (
-                <div
-                  key={opt.id}
-                  onClick={() => setPaymentMethod(opt.id as any)}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    paymentMethod === opt.id
-                      ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary"
-                      : "border-surface-dim bg-white hover:bg-surface-low"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-heading font-bold text-sm text-on-surface">{opt.title}</span>
-                    {paymentMethod === opt.id && <CheckCircle2 className="h-4 w-4 text-brand-primary" />}
+              {/* Cash on Delivery */}
+              <div
+                onClick={() => setPaymentMethod("COD")}
+                className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                  paymentMethod === "COD"
+                    ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary"
+                    : "border-surface-dim bg-white hover:bg-surface-low"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-heading font-bold text-sm text-on-surface">
+                      Cash on Delivery / Warehouse Unloading (COD)
+                    </span>
+                    <Badge variant="success" size="sm" className="ml-2">Recommended</Badge>
                   </div>
-                  <p className="text-xs text-slate-neutral mt-1">{opt.desc}</p>
+                  {paymentMethod === "COD" && <CheckCircle2 className="h-4 w-4 text-brand-primary" />}
                 </div>
-              ))}
+                <p className="text-xs text-slate-neutral mt-1">
+                  Inspect harvest lots upon weighbridge delivery. Payment status remains PENDING until shipment is verified at destination.
+                </p>
+              </div>
+
+              {/* Bank Transfer / Escrow */}
+              <div
+                onClick={() => setPaymentMethod("BANK_TRANSFER")}
+                className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                  paymentMethod === "BANK_TRANSFER"
+                    ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary"
+                    : "border-surface-dim bg-white hover:bg-surface-low"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-sm text-on-surface">
+                    RTGS / Direct Bank Transfer to Escrow
+                  </span>
+                  {paymentMethod === "BANK_TRANSFER" && <CheckCircle2 className="h-4 w-4 text-brand-primary" />}
+                </div>
+                <p className="text-xs text-slate-neutral mt-1">
+                  Direct inter-bank settlement. Funds held in verified platform escrow until dispatch confirmation.
+                </p>
+              </div>
+
+              {/* Online Payment (Gated / Unavailable) */}
+              <div className="p-4 rounded-lg border border-slate-200 bg-slate-50/70 opacity-75 cursor-not-allowed">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-slate-neutral" />
+                    <span className="font-heading font-bold text-sm text-slate-neutral">
+                      Online Gateway (UPI, Cards & Netbanking)
+                    </span>
+                  </div>
+                  <Badge variant="secondary" size="sm">Phase 8C Gate</Badge>
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5">
+                  Online payment gateway integration is currently in verification and temporarily unavailable. Please proceed with Cash on Delivery or Bank Transfer.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-surface-dim">

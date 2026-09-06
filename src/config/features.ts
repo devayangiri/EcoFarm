@@ -8,20 +8,20 @@
  */
 export const FEATURES = {
   // Phase 4: Buyer procurement RFQs and product bookmarks
-  SAVED_PRODUCTS: false,
+  SAVED_PRODUCTS: true,
   BUYER_REQUIREMENTS: false,
 
   // Phase 5: Granular shipment milestones
-  ORDER_TIMELINES: false,
+  ORDER_TIMELINES: true,
 
   // Phase 6: Ratings and peer reviews
-  REVIEWS: false,
+  REVIEWS: true,
 
   // Phase 7: Buyer service requests and quotation workflow
   SERVICE_REQUESTS: false,
 
   // Phase 8: Multi-vendor cart and checkout session
-  CART_AND_CHECKOUT: false,
+  CART_AND_CHECKOUT: true,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

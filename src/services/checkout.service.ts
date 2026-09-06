@@ -121,6 +121,121 @@ export class CheckoutService {
   }
 
   /**
+   * Initiate an instantaneous "Buy Now" direct checkout session bypassing persistent cart
+   */
+  static async initiateDirectCheckout(buyerId: string, productId: string, quantity: number) {
+    if (quantity <= 0) {
+      throw AppError.validation("Purchase quantity must be greater than zero");
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        title: true,
+        sellerId: true,
+        status: true,
+        pricePerUnit: true,
+        minimumOrderQuantity: true,
+        availableStock: true,
+        reservedStock: true,
+      },
+    });
+
+    if (!product) {
+      throw AppError.notFound("Product not found");
+    }
+
+    if (product.status !== "ACTIVE") {
+      throw AppError.businessRule(`"${product.title}" is currently not available for purchase`);
+    }
+
+    if (product.sellerId === buyerId) {
+      throw AppError.businessRule("You cannot purchase your own product listing");
+    }
+
+    const moq = product.minimumOrderQuantity.toNumber();
+    if (quantity < moq) {
+      throw AppError.businessRule(`Minimum order quantity for "${product.title}" is ${moq}`);
+    }
+
+    // Sweep stale reservations
+    await InventoryReservationService.expireStaleReservations();
+
+    const sessionId = `chk-direct-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const expiresAt = new Date(Date.now() + InventoryReservationService.RESERVATION_TTL_MS);
+
+    const price = product.pricePerUnit.toNumber();
+    const subtotal = price * quantity;
+    const shippingAmount = 250;
+    const totalAmount = subtotal + shippingAmount;
+
+    const checkoutSession = await prisma.$transaction(async (tx) => {
+      // 1. Transactionally reserve stock
+      await InventoryReservationService.createReservation(
+        tx,
+        product.id,
+        sessionId,
+        quantity
+      );
+
+      // 2. Create an isolated checkout Cart
+      const directCart = await tx.cart.create({
+        data: {
+          buyerId,
+          status: "CHECKOUT",
+        },
+      });
+
+      // 3. Create CartItem in the direct cart
+      await tx.cartItem.create({
+        data: {
+          cartId: directCart.id,
+          productId: product.id,
+          sellerId: product.sellerId,
+          quantity: new Prisma.Decimal(quantity),
+        },
+      });
+
+      // 4. Create CheckoutSession record
+      const session = await tx.checkoutSession.create({
+        data: {
+          buyerId,
+          cartId: directCart.id,
+          status: "ACTIVE",
+          subtotal: new Prisma.Decimal(subtotal),
+          shippingAmount: new Prisma.Decimal(shippingAmount),
+          totalAmount: new Prisma.Decimal(totalAmount),
+          expiresAt,
+        },
+      });
+
+      // 5. Audit Log
+      await tx.auditLog.create({
+        data: {
+          actorUserId: buyerId,
+          action: "DIRECT_CHECKOUT_CREATED",
+          resource: "CheckoutSession",
+          resourceId: session.id,
+          metadata: { productId, quantity, totalAmount },
+        },
+      });
+
+      return session;
+    });
+
+    return {
+      sessionId: checkoutSession.id,
+      cartSessionId: sessionId,
+      subtotal,
+      shippingAmount,
+      totalAmount,
+      expiresAt,
+      sellerCount: 1,
+    };
+  }
+
+  /**
    * Get checkout session details with ownership enforcement
    */
   static async getCheckoutSession(buyerId: string, checkoutSessionId: string) {

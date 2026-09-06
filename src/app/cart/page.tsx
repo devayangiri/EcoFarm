@@ -1,10 +1,9 @@
 import React from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/rbac";
-import { EmptyState } from "@/components/ui/empty-state";
+import { CartService } from "@/services/cart.service";
 import { MarketplaceShell } from "@/components/public/marketplace-shell";
-import { FEATURES } from "@/config/features";
-import { Clock } from "lucide-react";
+import { CartView } from "@/components/cart/cart-view";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +11,27 @@ export default async function CartPage() {
   const session = await getCurrentUser();
   if (!session || session.role !== "BUYER") {
     redirect("/login?callbackUrl=/cart");
+  }
+
+  let cart = {
+    id: "",
+    buyerId: session.userId,
+    status: "ACTIVE",
+    sellerGroups: [],
+    summary: {
+      itemCount: 0,
+      totalUniqueSellers: 0,
+      subtotal: 0,
+      estimatedShipping: 0,
+      platformCommission: 0,
+      grandTotal: 0,
+    },
+  };
+
+  try {
+    cart = (await CartService.getCart(session.userId)) as any;
+  } catch (error) {
+    console.error("[CartPage] Error retrieving cart:", error);
   }
 
   return (
@@ -26,13 +46,7 @@ export default async function CartPage() {
           </p>
         </div>
 
-        <EmptyState
-          icon={Clock}
-          title="Wholesale Cart is coming soon."
-          description="Multi-vendor shopping cart, freight aggregation, and direct checkout are scheduled for Phase 8. Currently, buyers can explore listings and initiate direct inquiries with verified producers."
-          actionLabel="Explore Marketplace"
-          actionHref="/buyer/marketplace"
-        />
+        <CartView initialCart={cart} />
       </div>
     </MarketplaceShell>
   );

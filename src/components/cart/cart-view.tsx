@@ -93,6 +93,9 @@ export function CartView({ initialCart }: CartViewProps) {
       if (updatedCartJson.success) {
         setCart(updatedCartJson.data);
       }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("cart-updated"));
+      }
     } catch (err: any) {
       setErrorMessage(err.message || "An unexpected error occurred");
     } finally {
@@ -116,6 +119,9 @@ export function CartView({ initialCart }: CartViewProps) {
       const updatedCartJson = await updatedCartRes.json();
       if (updatedCartJson.success) {
         setCart(updatedCartJson.data);
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("cart-updated"));
       }
     } catch (err: any) {
       setErrorMessage(err.message || "An unexpected error occurred");

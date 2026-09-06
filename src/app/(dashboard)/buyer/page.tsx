@@ -21,6 +21,8 @@ import {
   Plus,
   User,
   ShoppingBag,
+  ShoppingCart,
+  Package,
   ArrowRight,
   Sprout,
   Waves,
@@ -33,14 +35,26 @@ export default async function BuyerDashboardPage() {
   const user = await requireRole("BUYER");
   let isDbUnavailable = false;
   let dashboardData = {
-    metrics: { savedProducts: "Coming Soon" as string | number, activeRequirements: "Coming Soon" as string | number, productInquiries: 0, connectedSuppliers: 0 },
-    features: { isSavedProductsAvailable: false, isRequirementsAvailable: false },
+    metrics: {
+      savedProducts: 0,
+      activeRequirements: "Coming Soon" as string | number,
+      productInquiries: 0,
+      connectedSuppliers: 0,
+      cartItems: 0,
+      activeOrders: 0,
+    },
+    features: {
+      isSavedProductsAvailable: true,
+      isRequirementsAvailable: false,
+      isCartAvailable: true,
+    },
     recentRequirements: [] as any[],
+    recentOrders: [] as any[],
     recommendedProducts: [] as any[],
   };
 
   try {
-    dashboardData = await BuyerService.getBuyerDashboard(user.userId);
+    dashboardData = (await BuyerService.getBuyerDashboard(user.userId)) as any;
   } catch (err) {
     isDbUnavailable = true;
     console.error("[BuyerDashboard] Active database query failed:", {
@@ -168,32 +182,32 @@ export default async function BuyerDashboardPage() {
         {/* Real KPI Metrics */}
         <StatGrid columns={4}>
           <StatCard
-            title="Saved Products"
+            title="Saved Lots"
             value={metrics.savedProducts}
-            timeframe={features.isSavedProductsAvailable ? "Monitored lots" : "Phase 4 Feature"}
+            timeframe="Monitored listings"
             icon={Bookmark}
             iconVariant="primary"
           />
           <StatCard
-            title="Active Requirements"
-            value={metrics.activeRequirements}
-            timeframe={features.isRequirementsAvailable ? "Published volume RFQs" : "Phase 4 Feature"}
-            icon={FileText}
+            title="Procurement Cart"
+            value={metrics.cartItems}
+            timeframe="Lots ready for checkout"
+            icon={ShoppingCart}
             iconVariant="secondary"
           />
           <StatCard
-            title="Product Inquiries"
+            title="Purchase Orders"
+            value={metrics.activeOrders}
+            timeframe="Confirmed & dispatched"
+            icon={Package}
+            iconVariant="success"
+          />
+          <StatCard
+            title="Producer Inquiries"
             value={metrics.productInquiries}
             timeframe="Active producer threads"
             icon={MessageSquare}
             iconVariant="info"
-          />
-          <StatCard
-            title="Connected Suppliers"
-            value={metrics.connectedSuppliers}
-            timeframe="Verified producers"
-            icon={Users}
-            iconVariant="warning"
           />
         </StatGrid>
 
@@ -213,41 +227,73 @@ export default async function BuyerDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/buyer/saved" className="block">
+            <Link href="/buyer/cart" className="block">
               <Card className="hover:border-brand-primary/40 hover:shadow-sm transition-all p-4 text-left group">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-secondary/10 text-brand-secondary mb-2 group-hover:scale-105 transition-transform">
-                  <Bookmark className="h-5 w-5" />
+                  <ShoppingCart className="h-5 w-5" />
                 </div>
-                <div className="font-heading text-xs font-bold text-on-surface">Saved Products</div>
+                <div className="font-heading text-xs font-bold text-on-surface">Procurement Cart</div>
                 <div className="text-[11px] text-slate-neutral mt-0.5">
-                  {features.isSavedProductsAvailable ? `${metrics.savedProducts} Saved Lots` : "Phase 4 (Coming Soon)"}
+                  {metrics.cartItems} Lots in Cart
                 </div>
               </Card>
             </Link>
 
-            <Link href="/buyer/requirements" className="block">
+            <Link href="/buyer/orders" className="block">
               <Card className="hover:border-brand-primary/40 hover:shadow-sm transition-all p-4 text-left group">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-status-success/10 text-status-success mb-2 group-hover:scale-105 transition-transform">
-                  <Plus className="h-5 w-5" />
+                  <Package className="h-5 w-5" />
                 </div>
-                <div className="font-heading text-xs font-bold text-on-surface">Post Requirement</div>
+                <div className="font-heading text-xs font-bold text-on-surface">Purchase Orders</div>
                 <div className="text-[11px] text-slate-neutral mt-0.5">
-                  {features.isRequirementsAvailable ? "Publish Bulk Procurement RFQ" : "Phase 4 (Coming Soon)"}
+                  {metrics.activeOrders} Orders Placed
                 </div>
               </Card>
             </Link>
 
-            <Link href="/buyer/profile" className="block">
+            <Link href="/buyer/saved" className="block">
               <Card className="hover:border-brand-primary/40 hover:shadow-sm transition-all p-4 text-left group">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-surface-container text-brand-primary mb-2 group-hover:scale-105 transition-transform">
-                  <User className="h-5 w-5" />
+                  <Bookmark className="h-5 w-5" />
                 </div>
-                <div className="font-heading text-xs font-bold text-on-surface">Manage Profile</div>
-                <div className="text-[11px] text-slate-neutral mt-0.5">Company & Billing Details</div>
+                <div className="font-heading text-xs font-bold text-on-surface">Saved Lots</div>
+                <div className="text-[11px] text-slate-neutral mt-0.5">{metrics.savedProducts} Saved Lots</div>
               </Card>
             </Link>
           </div>
         </div>
+
+        {/* Recent Purchase Orders Snapshot if any */}
+        {dashboardData.recentOrders && dashboardData.recentOrders.length > 0 && (
+          <div className="space-y-4">
+            <SectionHeader
+              title="Recent Purchase Orders"
+              subtitle="Latest multi-vendor procurement orders and consignment milestones."
+              actionHref="/buyer/orders"
+              actionLabel="View All Orders"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {dashboardData.recentOrders.map((ord: any) => (
+                <Link key={ord.id} href={`/buyer/orders/${ord.id}`} className="block">
+                  <Card className="p-4 border border-surface-dim bg-white hover:border-brand-primary/40 transition-all space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-brand-primary">{ord.orderNumber}</span>
+                      <Badge variant={ord.status === "COMPLETED" ? "success" : "info"} size="sm">
+                        {ord.status}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-slate-neutral">
+                      {ord.subOrderCount} Sub-Order(s) • {new Date(ord.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="font-heading font-extrabold text-sm text-on-surface">
+                      ₹{ord.totalAmount.toLocaleString("en-IN")}
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recommended Harvests & Aquaculture Catches */}
         <div className="space-y-4">
