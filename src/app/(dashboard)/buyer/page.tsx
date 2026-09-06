@@ -278,7 +278,16 @@ export default async function BuyerDashboardPage() {
                   <Card className="p-4 border border-surface-dim bg-white hover:border-brand-primary/40 transition-all space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-bold text-brand-primary">{ord.orderNumber}</span>
-                      <Badge variant={ord.status === "COMPLETED" ? "success" : "info"} size="sm">
+                      <Badge
+                        variant={
+                          ord.status === "COMPLETED"
+                            ? "success"
+                            : ord.status === "CANCELLED"
+                            ? "error"
+                            : "info"
+                        }
+                        size="sm"
+                      >
                         {ord.status}
                       </Badge>
                     </div>

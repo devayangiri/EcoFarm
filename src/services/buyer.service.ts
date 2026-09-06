@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { Prisma, Sector, BuyerType, RequirementStatus } from "@prisma/client";
+import { Prisma, Sector, BuyerType, RequirementStatus, OrderGroupStatus, OrderStatus } from "@prisma/client";
 import { FEATURES } from "@/config/features";
 import type {
   UpdateBuyerProfileInput,
@@ -97,7 +97,20 @@ export class BuyerService {
         cartProductIds = new Set(cart?.items?.map((it) => it.productId) || []);
 
         activeOrdersCount = await prisma.orderGroup.count({
-          where: { buyerId },
+          where: {
+            buyerId,
+            status: { not: OrderGroupStatus.CANCELLED },
+            sellerOrders: {
+              some: {
+                status: {
+                  notIn: [
+                    OrderStatus.CANCELLED_BY_BUYER,
+                    OrderStatus.CANCELLED_BY_SELLER,
+                  ],
+                },
+              },
+            },
+          },
         });
 
         const orders = await prisma.orderGroup.findMany({

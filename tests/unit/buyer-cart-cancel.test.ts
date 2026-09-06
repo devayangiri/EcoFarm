@@ -30,6 +30,8 @@ vi.mock("@/lib/prisma", () => ({
     },
     orderGroup: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
       update: vi.fn(),
     },
     orderTimeline: {
@@ -44,8 +46,12 @@ vi.mock("@/lib/prisma", () => ({
     auditLog: {
       create: vi.fn(),
     },
+    conversationParticipant: {
+      count: vi.fn(),
+    },
     savedProduct: {
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     category: {
       findMany: vi.fn(),
@@ -136,7 +142,10 @@ describe("Buyer Cart State Sync & Safe Order Cancellation", () => {
         items: [{ productId: "prod-100" }],
       });
 
-      const result = await MarketplaceService.searchProducts({}, 1, 10, "buyer-123");
+      const result = await MarketplaceService.searchProducts(
+        { sector: "ALL", inStockOnly: false, sortBy: "newest", page: 1, pageSize: 10 },
+        "buyer-123"
+      );
       expect(result.items.length).toBe(2);
       expect(result.items[0].id).toBe("prod-100");
       expect(result.items[0].isInCart).toBe(true);
@@ -445,6 +454,126 @@ describe("Buyer Cart State Sync & Safe Order Cancellation", () => {
       );
       // COD payment should NOT be cancelled
       expect(prisma.payment.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ----------------------------------------------------
+  // 3. BUYER DASHBOARD PURCHASE ORDERS METRIC
+  // ----------------------------------------------------
+  describe("3. Buyer Dashboard Purchase Orders Metric (Excluding Cancelled Orders)", () => {
+    it("Case 1: No orders -> Purchase Orders = 0", async () => {
+      (prisma.conversationParticipant.count as any).mockResolvedValue(0);
+      (prisma.product.findMany as any).mockResolvedValue([]);
+      (prisma.savedProduct.count as any).mockResolvedValue(0);
+      (prisma.cart.findFirst as any).mockResolvedValue(null);
+      (prisma.orderGroup.count as any).mockResolvedValue(0);
+      (prisma.orderGroup.findMany as any).mockResolvedValue([]);
+
+      const dashboard = await BuyerService.getBuyerDashboard("buyer-123");
+      expect(dashboard.metrics.activeOrders).toBe(0);
+
+      // Verify the query excludes CANCELLED OrderGroups and cancelled sub-orders
+      expect(prisma.orderGroup.count).toHaveBeenCalledWith({
+        where: {
+          buyerId: "buyer-123",
+          status: { not: "CANCELLED" },
+          sellerOrders: {
+            some: {
+              status: {
+                notIn: ["CANCELLED_BY_BUYER", "CANCELLED_BY_SELLER"],
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("Case 2: 1 active order -> Purchase Orders = 1", async () => {
+      (prisma.conversationParticipant.count as any).mockResolvedValue(0);
+      (prisma.product.findMany as any).mockResolvedValue([]);
+      (prisma.savedProduct.count as any).mockResolvedValue(0);
+      (prisma.cart.findFirst as any).mockResolvedValue(null);
+      (prisma.orderGroup.count as any).mockResolvedValue(1);
+      (prisma.orderGroup.findMany as any).mockResolvedValue([
+        {
+          id: "grp-1",
+          orderNumber: "AG-ORD-001",
+          totalAmount: new Prisma.Decimal(500),
+          status: "PAYMENT_PENDING",
+          createdAt: new Date(),
+          sellerOrders: [{ id: "sub-1", seller: { fullName: "Farmer 1" }, items: [] }],
+        },
+      ]);
+
+      const dashboard = await BuyerService.getBuyerDashboard("buyer-123");
+      expect(dashboard.metrics.activeOrders).toBe(1);
+    });
+
+    it("Case 3: 1 cancelled order -> Purchase Orders = 0", async () => {
+      (prisma.conversationParticipant.count as any).mockResolvedValue(0);
+      (prisma.product.findMany as any).mockResolvedValue([]);
+      (prisma.savedProduct.count as any).mockResolvedValue(0);
+      (prisma.cart.findFirst as any).mockResolvedValue(null);
+      // Prisma count returns 0 because cancelled order group is filtered out
+      (prisma.orderGroup.count as any).mockResolvedValue(0);
+      (prisma.orderGroup.findMany as any).mockResolvedValue([]);
+
+      const dashboard = await BuyerService.getBuyerDashboard("buyer-123");
+      expect(dashboard.metrics.activeOrders).toBe(0);
+    });
+
+    it("Case 4: 1 active order + 1 cancelled order -> Purchase Orders = 1", async () => {
+      (prisma.conversationParticipant.count as any).mockResolvedValue(0);
+      (prisma.product.findMany as any).mockResolvedValue([]);
+      (prisma.savedProduct.count as any).mockResolvedValue(0);
+      (prisma.cart.findFirst as any).mockResolvedValue(null);
+      // 1 active order matched, 1 cancelled order filtered out
+      (prisma.orderGroup.count as any).mockResolvedValue(1);
+      (prisma.orderGroup.findMany as any).mockResolvedValue([]);
+
+      const dashboard = await BuyerService.getBuyerDashboard("buyer-123");
+      expect(dashboard.metrics.activeOrders).toBe(1);
+    });
+
+    it("Case 5: Multiple seller sub-orders inside one OrderGroup -> count without double counting", async () => {
+      (prisma.conversationParticipant.count as any).mockResolvedValue(0);
+      (prisma.product.findMany as any).mockResolvedValue([]);
+      (prisma.savedProduct.count as any).mockResolvedValue(0);
+      (prisma.cart.findFirst as any).mockResolvedValue(null);
+      // Single multi-seller OrderGroup with 3 sub-orders still counts as 1 Purchase Order
+      (prisma.orderGroup.count as any).mockResolvedValue(1);
+      (prisma.orderGroup.findMany as any).mockResolvedValue([]);
+
+      const dashboard = await BuyerService.getBuyerDashboard("buyer-123");
+      expect(dashboard.metrics.activeOrders).toBe(1);
+    });
+
+    it("Case 6: Cancelled order remains visible in /buyer/orders (OrderService.getBuyerOrderGroups)", async () => {
+      (prisma.orderGroup.findMany as any).mockResolvedValue([
+        {
+          id: "grp-cancelled",
+          orderNumber: "AG-ORD-CANCELLED",
+          totalAmount: new Prisma.Decimal(1200),
+          status: "CANCELLED",
+          createdAt: new Date(),
+          sellerOrders: [
+            {
+              id: "sub-1",
+              status: "CANCELLED_BY_BUYER",
+              seller: { id: "s1", fullName: "Farmer A" },
+              items: [],
+            },
+          ],
+          payments: [],
+        },
+      ]);
+      (prisma.orderGroup.count as any).mockResolvedValue(1);
+
+      const result = await OrderService.getBuyerOrderGroups("buyer-123");
+      expect(result.orderGroups.length).toBe(1);
+      expect(result.orderGroups[0].id).toBe("grp-cancelled");
+      expect(result.orderGroups[0].status).toBe("CANCELLED");
+      expect(result.pagination.total).toBe(1);
     });
   });
 });
