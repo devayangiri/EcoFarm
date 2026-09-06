@@ -43,7 +43,16 @@ export default async function BuyerOrdersPage() {
                       <span className="font-mono text-sm font-bold text-brand-primary">
                         {group.orderNumber}
                       </span>
-                      <Badge variant={group.status === "COMPLETED" ? "success" : "info"} size="sm">
+                      <Badge
+                        variant={
+                          group.status === "COMPLETED"
+                            ? "success"
+                            : group.status === "CANCELLED"
+                            ? "error"
+                            : "info"
+                        }
+                        size="sm"
+                      >
                         {group.status}
                       </Badge>
                     </div>
@@ -74,7 +83,16 @@ export default async function BuyerOrdersPage() {
                           {subOrder.items.map((it) => `${it.productTitleSnapshot} (${it.quantity.toString()} ${it.unitSnapshot})`).join(", ")}
                         </p>
                       </div>
-                      <Badge variant={subOrder.status === "DELIVERED" ? "success" : "secondary"} size="sm">
+                      <Badge
+                        variant={
+                          subOrder.status === "DELIVERED" || subOrder.status === "COMPLETED"
+                            ? "success"
+                            : subOrder.status.startsWith("CANCELLED")
+                            ? "error"
+                            : "secondary"
+                        }
+                        size="sm"
+                      >
                         {subOrder.status}
                       </Badge>
                     </div>

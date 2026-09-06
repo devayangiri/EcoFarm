@@ -23,6 +23,7 @@ import {
   Star,
   Zap,
   Send,
+  ArrowRight,
 } from "lucide-react";
 
 export interface ProductDetailViewProps {
@@ -58,6 +59,7 @@ export interface ProductDetailViewProps {
       farms: Array<{ id: string; name: string; totalAreaAcres: number; sector: string }>;
     };
     isSaved: boolean;
+    isInCart?: boolean;
   };
   currentUserRole?: string | null;
 }
@@ -66,12 +68,41 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
   const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(product.isSaved);
+  const [isInCart, setIsInCart] = useState(product.isInCart || false);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
   const [quantity, setQuantity] = useState(product.minimumOrderQuantity);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [cartError, setCartError] = useState<string | null>(null);
+
+  const checkCartMembership = useCallback(async () => {
+    if (currentUserRole !== "BUYER") return;
+    try {
+      const res = await fetch("/api/cart/items");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setIsInCart(json.data.includes(product.id));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [currentUserRole, product.id]);
+
+  useEffect(() => {
+    checkCartMembership();
+
+    const handleCartUpdated = () => {
+      checkCartMembership();
+    };
+
+    window.addEventListener("cart-updated", handleCartUpdated);
+    return () => {
+      window.removeEventListener("cart-updated", handleCartUpdated);
+    };
+  }, [checkCartMembership]);
 
   // Real Reviews & Ratings State
   const [reviewsData, setReviewsData] = useState<{
@@ -160,6 +191,7 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
       }
 
       setCartSuccess(true);
+      setIsInCart(true);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("cart-updated"));
       }
@@ -626,16 +658,29 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
                 </div>
 
                 <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full"
-                    onClick={handleAddToCart}
-                    isLoading={isAddingToCart}
-                    leftIcon={cartSuccess ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
-                  >
-                    {cartSuccess ? "Added to Cart" : "Add Lot to Cart"}
-                  </Button>
+                  {isInCart ? (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full border-brand-primary text-brand-primary bg-brand-primary/5 hover:bg-brand-primary/10"
+                      onClick={() => router.push("/cart")}
+                      leftIcon={<Check className="h-4 w-4 text-brand-primary" />}
+                      rightIcon={<ArrowRight className="h-4 w-4" />}
+                    >
+                      In Cart — View Cart
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      onClick={handleAddToCart}
+                      isLoading={isAddingToCart}
+                      leftIcon={cartSuccess ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                    >
+                      {cartSuccess ? "Added to Cart" : "Add Lot to Cart"}
+                    </Button>
+                  )}
 
                   <Button
                     variant="primary"
@@ -725,15 +770,27 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
             >
               <MessageSquare className="h-4 w-4" />
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleAddToCart}
-              isLoading={isAddingToCart}
-              className="min-h-[44px] px-4 text-xs font-bold"
-            >
-              {cartSuccess ? "Added ✓" : "Add to Cart"}
-            </Button>
+            {isInCart ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/cart")}
+                className="min-h-[44px] px-3 text-xs font-bold border-brand-primary text-brand-primary bg-brand-primary/5"
+                rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+              >
+                In Cart
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddToCart}
+                isLoading={isAddingToCart}
+                className="min-h-[44px] px-4 text-xs font-bold"
+              >
+                {cartSuccess ? "Added ✓" : "Add to Cart"}
+              </Button>
+            )}
           </div>
         </div>
       )}

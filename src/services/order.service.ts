@@ -10,7 +10,7 @@ export class OrderService {
    */
   private static readonly VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     PLACED: ["CONFIRMED", "CANCELLED_BY_BUYER", "CANCELLED_BY_SELLER"],
-    CONFIRMED: ["PROCESSING", "CANCELLED_BY_SELLER"],
+    CONFIRMED: ["PROCESSING", "CANCELLED_BY_BUYER", "CANCELLED_BY_SELLER"],
     PROCESSING: ["SHIPPED"],
     SHIPPED: ["DELIVERED", "DISPUTED"],
     DELIVERED: ["COMPLETED", "DISPUTED"],
@@ -311,64 +311,315 @@ export class OrderService {
   }
 
   /**
-   * Cancel order by buyer (allowed only if order is in PLACED status)
+   * Cancel order by buyer (allowed only if order is in PLACED or CONFIRMED status)
+   * Supports both sub-order ID (Order) and OrderGroup ID.
    */
-  static async cancelOrderByBuyer(buyerId: string, orderId: string, reason: string) {
-    const order = await this.getBuyerOrderById(buyerId, orderId);
+  static async cancelOrderByBuyer(buyerId: string, orderOrGroupId: string, reason: string) {
+    if (!reason || reason.trim().length < 3) {
+      throw AppError.validation("A valid cancellation reason is required (at least 3 characters)");
+    }
 
-    if (order.status !== "PLACED") {
+    const trimmedReason = reason.trim();
+
+    // Check if orderOrGroupId is a single sub-order (Order)
+    const existingSubOrder = await prisma.order.findUnique({
+      where: { id: orderOrGroupId },
+      include: {
+        orderGroup: true,
+        items: true,
+      },
+    });
+
+    if (existingSubOrder) {
+      if (existingSubOrder.orderGroup.buyerId !== buyerId) {
+        throw AppError.forbidden("You do not have permission to cancel this order");
+      }
+
+      if (existingSubOrder.status === "CANCELLED_BY_BUYER" || existingSubOrder.status === "CANCELLED_BY_SELLER") {
+        throw AppError.businessRule("This order has already been cancelled");
+      }
+
+      if (existingSubOrder.status !== "PLACED" && existingSubOrder.status !== "CONFIRMED") {
+        throw AppError.businessRule(
+          `Orders in "${existingSubOrder.status}" status cannot be cancelled because fulfillment has already begun.`
+        );
+      }
+
+      return await prisma.$transaction(async (tx) => {
+        // Atomic re-read inside transaction for race-condition protection
+        const currentOrder = await tx.order.findUnique({
+          where: { id: existingSubOrder.id },
+          include: {
+            items: true,
+          },
+        });
+
+        if (!currentOrder) {
+          throw AppError.notFound("Order not found");
+        }
+
+        if (currentOrder.status !== "PLACED" && currentOrder.status !== "CONFIRMED") {
+          throw AppError.businessRule(
+            `Order state changed to "${currentOrder.status}" and cannot be cancelled.`
+          );
+        }
+
+        // 1. Atomic inventory release & revive OUT_OF_STOCK -> ACTIVE
+        for (const item of currentOrder.items) {
+          const updatedProduct = await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              availableStock: { increment: item.quantity },
+            },
+            select: { id: true, availableStock: true, status: true },
+          });
+
+          if (updatedProduct.status === "OUT_OF_STOCK" && Number(updatedProduct.availableStock) > 0) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { status: "ACTIVE" },
+            });
+          }
+        }
+
+        // 2. Transition Order to CANCELLED_BY_BUYER
+        const cancelledOrder = await tx.order.update({
+          where: { id: currentOrder.id },
+          data: { status: "CANCELLED_BY_BUYER" },
+        });
+
+        // 3. Order Timeline
+        await tx.orderTimeline.create({
+          data: {
+            orderId: currentOrder.id,
+            status: "CANCELLED_BY_BUYER",
+            actorId: buyerId,
+            note: `Cancelled by buyer: ${trimmedReason}`,
+          },
+        });
+
+        // 4. Notifications
+        // To Seller
+        await tx.notification.create({
+          data: {
+            userId: currentOrder.sellerId,
+            type: "ORDER_UPDATE",
+            title: "Order Cancelled by Buyer",
+            body: `Order ${currentOrder.subOrderNumber} was cancelled by buyer. Reason: ${trimmedReason}`,
+          },
+        });
+
+        // To Buyer
+        await tx.notification.create({
+          data: {
+            userId: buyerId,
+            type: "ORDER_UPDATE",
+            title: "Order Cancelled",
+            body: `Your order ${currentOrder.subOrderNumber} has been successfully cancelled.`,
+          },
+        });
+
+        // 5. Audit Log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: buyerId,
+            action: "ORDER_CANCELLED",
+            resource: "Order",
+            resourceId: currentOrder.id,
+            metadata: {
+              reason: trimmedReason,
+              cancelledBy: "BUYER",
+              subOrderNumber: currentOrder.subOrderNumber,
+              orderGroupId: currentOrder.orderGroupId,
+            },
+          },
+        });
+
+        // 6. Check sibling orders in OrderGroup
+        const siblingOrders = await tx.order.findMany({
+          where: { orderGroupId: currentOrder.orderGroupId },
+          select: { id: true, status: true },
+        });
+
+        const allCancelled = siblingOrders.every(
+          (o) => o.status === "CANCELLED_BY_BUYER" || o.status === "CANCELLED_BY_SELLER"
+        );
+
+        if (allCancelled) {
+          await tx.orderGroup.update({
+            where: { id: currentOrder.orderGroupId },
+            data: { status: "CANCELLED" },
+          });
+
+          // Cancel any pending payment (e.g. COD)
+          await tx.payment.updateMany({
+            where: {
+              orderGroupId: currentOrder.orderGroupId,
+              status: "PENDING",
+            },
+            data: { status: "CANCELLED" },
+          });
+        }
+
+        return cancelledOrder;
+      });
+    }
+
+    // Otherwise check if orderOrGroupId is an OrderGroup
+    const existingGroup = await prisma.orderGroup.findUnique({
+      where: { id: orderOrGroupId },
+      include: {
+        sellerOrders: {
+          include: { items: true },
+        },
+      },
+    });
+
+    if (!existingGroup) {
+      throw AppError.notFound("Order not found");
+    }
+
+    if (existingGroup.buyerId !== buyerId) {
+      throw AppError.forbidden("You do not have permission to cancel this order");
+    }
+
+    if (existingGroup.status === "CANCELLED") {
+      throw AppError.businessRule("This order has already been cancelled");
+    }
+
+    const cancellableSubOrders = existingGroup.sellerOrders.filter(
+      (so) => so.status === "PLACED" || so.status === "CONFIRMED"
+    );
+
+    if (cancellableSubOrders.length === 0) {
       throw AppError.businessRule(
-        `Orders in "${order.status}" status cannot be cancelled by buyer`
+        "No cancellable sub-orders remaining. Fulfillment has already started for all shipments."
       );
     }
 
-    const cancelled = await prisma.$transaction(async (tx) => {
-      // Restore inventory quantities
-      for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
+    return await prisma.$transaction(async (tx) => {
+      // Re-read group and sub-orders inside transaction
+      const groupInTx = await tx.orderGroup.findUnique({
+        where: { id: existingGroup.id },
+        include: {
+          sellerOrders: {
+            include: { items: true },
+          },
+        },
+      });
+
+      if (!groupInTx) throw AppError.notFound("Order group not found");
+
+      const subOrdersToCancel = groupInTx.sellerOrders.filter(
+        (so) => so.status === "PLACED" || so.status === "CONFIRMED"
+      );
+
+      for (const subOrder of subOrdersToCancel) {
+        // 1. Release inventory
+        for (const item of subOrder.items) {
+          const updatedProduct = await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              availableStock: { increment: item.quantity },
+            },
+            select: { id: true, availableStock: true, status: true },
+          });
+
+          if (updatedProduct.status === "OUT_OF_STOCK" && Number(updatedProduct.availableStock) > 0) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { status: "ACTIVE" },
+            });
+          }
+        }
+
+        // 2. Update sub-order
+        await tx.order.update({
+          where: { id: subOrder.id },
+          data: { status: "CANCELLED_BY_BUYER" },
+        });
+
+        // 3. Timeline
+        await tx.orderTimeline.create({
           data: {
-            availableStock: { increment: item.quantity },
+            orderId: subOrder.id,
+            status: "CANCELLED_BY_BUYER",
+            actorId: buyerId,
+            note: `Cancelled by buyer: ${trimmedReason}`,
+          },
+        });
+
+        // 4. Notifications
+        await tx.notification.create({
+          data: {
+            userId: subOrder.sellerId,
+            type: "ORDER_UPDATE",
+            title: "Order Cancelled by Buyer",
+            body: `Order ${subOrder.subOrderNumber} was cancelled by buyer. Reason: ${trimmedReason}`,
+          },
+        });
+
+        // 5. Audit Log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: buyerId,
+            action: "ORDER_CANCELLED",
+            resource: "Order",
+            resourceId: subOrder.id,
+            metadata: {
+              reason: trimmedReason,
+              cancelledBy: "BUYER",
+              subOrderNumber: subOrder.subOrderNumber,
+              orderGroupId: groupInTx.id,
+            },
           },
         });
       }
 
-      const res = await tx.order.update({
-        where: { id: orderId },
-        data: { status: "CANCELLED_BY_BUYER" },
+      // Check all sub-orders of the group
+      const allOrders = await tx.order.findMany({
+        where: { orderGroupId: groupInTx.id },
+        select: { id: true, status: true },
       });
 
-      await tx.orderTimeline.create({
-        data: {
-          orderId,
-          status: "CANCELLED_BY_BUYER",
-          actorId: buyerId,
-          note: `Cancelled by buyer: ${reason}`,
-        },
-      });
+      const allCancelled = allOrders.every(
+        (o) => o.status === "CANCELLED_BY_BUYER" || o.status === "CANCELLED_BY_SELLER"
+      );
 
+      let groupStatus: OrderGroupStatus = groupInTx.status;
+      if (allCancelled) {
+        groupStatus = "CANCELLED";
+        await tx.orderGroup.update({
+          where: { id: groupInTx.id },
+          data: { status: "CANCELLED" },
+        });
+
+        // Cancel pending payments (e.g. COD)
+        await tx.payment.updateMany({
+          where: {
+            orderGroupId: groupInTx.id,
+            status: "PENDING",
+          },
+          data: { status: "CANCELLED" },
+        });
+      }
+
+      // Buyer Notification for whole group
       await tx.notification.create({
         data: {
-          userId: order.sellerId,
+          userId: buyerId,
           type: "ORDER_UPDATE",
-          title: "Order Cancelled by Buyer",
-          body: `Order ${order.subOrderNumber} was cancelled by the buyer. Reason: ${reason}`,
+          title: "Order Cancellation Processed",
+          body: `Order ${groupInTx.orderNumber} cancellation request has been processed. ${subOrdersToCancel.length} sub-order(s) cancelled.`,
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          actorUserId: buyerId,
-          action: "ORDER_CANCELLED",
-          resource: "Order",
-          resourceId: orderId,
-          metadata: { reason, cancelledBy: "BUYER" },
-        },
-      });
-
-      return res;
+      return {
+        id: groupInTx.id,
+        orderNumber: groupInTx.orderNumber,
+        status: groupStatus,
+        cancelledSubOrdersCount: subOrdersToCancel.length,
+      };
     });
-
-    return cancelled;
   }
 }

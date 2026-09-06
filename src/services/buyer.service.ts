@@ -75,6 +75,7 @@ export class BuyerService {
     let cartItemsCount: number = 0;
     let activeOrdersCount: number = 0;
     let recentOrders: any[] = [];
+    let cartProductIds = new Set<string>();
 
     if (FEATURES.SAVED_PRODUCTS) {
       try {
@@ -89,10 +90,11 @@ export class BuyerService {
         const cart = await prisma.cart.findFirst({
           where: { buyerId, status: "ACTIVE" },
           select: {
-            items: { select: { id: true } },
+            items: { select: { id: true, productId: true } },
           },
         });
         cartItemsCount = cart?.items?.length ?? 0;
+        cartProductIds = new Set(cart?.items?.map((it) => it.productId) || []);
 
         activeOrdersCount = await prisma.orderGroup.count({
           where: { buyerId },
@@ -185,6 +187,7 @@ export class BuyerService {
         imageUrl: p.images[0]?.url || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
         sellerName: p.seller.fullName,
         isSellerVerified: p.seller.farmerProfile?.isVerified ?? false,
+        isInCart: cartProductIds.has(p.id),
       })),
     };
   }

@@ -75,6 +75,30 @@ export class CartService {
   }
 
   /**
+   * Get active cart product IDs for a buyer (one efficient indexed query)
+   */
+  static async getActiveCartProductIds(buyerId: string): Promise<string[]> {
+    if (!FEATURES.CART_AND_CHECKOUT) {
+      return [];
+    }
+
+    try {
+      const cart = await prisma.cart.findFirst({
+        where: { buyerId, status: "ACTIVE" },
+        select: {
+          items: {
+            select: { productId: true },
+          },
+        },
+      });
+
+      return cart?.items?.map((it) => it.productId) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Get formatted buyer cart with authoritative pricing and seller grouping
    */
   static async getCart(buyerId: string) {

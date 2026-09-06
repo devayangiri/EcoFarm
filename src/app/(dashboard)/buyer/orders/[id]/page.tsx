@@ -7,6 +7,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OrderTrackingTimeline } from "@/components/orders/order-tracking-timeline";
+import { CancelOrderDialog } from "@/components/orders/cancel-order-dialog";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronLeft, Building2, Star } from "lucide-react";
 
@@ -46,9 +47,30 @@ export default async function BuyerOrderDetailPage({ params }: OrderDetailPagePr
               Placed on {new Date(group.createdAt).toLocaleString()}
             </p>
           </div>
-          <Badge variant={group.status === "COMPLETED" ? "success" : "info"} size="md">
-            {group.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={
+                group.status === "COMPLETED"
+                  ? "success"
+                  : group.status === "CANCELLED"
+                  ? "error"
+                  : "info"
+              }
+              size="md"
+            >
+              {group.status}
+            </Badge>
+            {group.status !== "CANCELLED" &&
+              group.sellerOrders.some((so) => so.status === "PLACED" || so.status === "CONFIRMED") &&
+              group.sellerOrders.length > 1 && (
+                <CancelOrderDialog
+                  orderId={group.id}
+                  orderNumber={group.orderNumber}
+                  isGroup={true}
+                  buttonSize="sm"
+                />
+              )}
+          </div>
         </div>
 
         {/* Shipping Address Snapshot */}
@@ -66,16 +88,35 @@ export default async function BuyerOrderDetailPage({ params }: OrderDetailPagePr
         <div className="space-y-6">
           {group.sellerOrders.map((sub) => (
             <Card key={sub.id} className="border border-surface-dim bg-white shadow-sm p-5 space-y-5">
-              <div className="flex items-center justify-between border-b border-surface-dim pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-surface-dim pb-3">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-brand-primary" />
                   <span className="font-heading font-bold text-sm text-on-surface">
                     Producer: {sub.seller.fullName} ({sub.subOrderNumber})
                   </span>
                 </div>
-                <Badge variant={sub.status === "DELIVERED" ? "success" : "secondary"} size="sm">
-                  {sub.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      sub.status === "DELIVERED" || sub.status === "COMPLETED"
+                        ? "success"
+                        : sub.status.startsWith("CANCELLED")
+                        ? "error"
+                        : "secondary"
+                    }
+                    size="sm"
+                  >
+                    {sub.status}
+                  </Badge>
+                  {(sub.status === "PLACED" || sub.status === "CONFIRMED") && (
+                    <CancelOrderDialog
+                      orderId={sub.id}
+                      orderNumber={sub.subOrderNumber}
+                      isGroup={false}
+                      buttonSize="sm"
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Items */}

@@ -142,6 +142,28 @@ export class MarketplaceService {
       }
     }
 
+    // Check active cart membership if buyer is logged in
+    let cartProductIds = new Set<string>();
+    if (currentUserId && FEATURES.CART_AND_CHECKOUT) {
+      try {
+        const cart = await prisma.cart.findFirst({
+          where: { buyerId: currentUserId, status: "ACTIVE" },
+          select: {
+            items: {
+              where: { productId: { in: items.map((i) => i.id) } },
+              select: { productId: true },
+            },
+          },
+        });
+        if (cart?.items) {
+          cartProductIds = new Set(cart.items.map((c) => c.productId));
+        }
+      } catch (err) {
+        console.warn("[MarketplaceService] Cart items query failed:", err instanceof Error ? err.message : err);
+        cartProductIds = new Set<string>();
+      }
+    }
+
     const transformedItems = items.map((item) => ({
       id: item.id,
       slug: item.slug,
@@ -166,6 +188,7 @@ export class MarketplaceService {
         experienceYears: item.seller.farmerProfile?.experienceYears ?? null,
       },
       isSaved: savedProductIds.has(item.id),
+      isInCart: cartProductIds.has(item.id),
     }));
 
     return {
@@ -255,6 +278,21 @@ export class MarketplaceService {
       }
     }
 
+    let isInCart = false;
+    if (currentUserId && FEATURES.CART_AND_CHECKOUT) {
+      try {
+        const cartItem = await prisma.cartItem.findFirst({
+          where: {
+            cart: { buyerId: currentUserId, status: "ACTIVE" },
+            productId: product.id,
+          },
+        });
+        isInCart = !!cartItem;
+      } catch {
+        isInCart = false;
+      }
+    }
+
     return {
       id: product.id,
       slug: product.slug,
@@ -297,6 +335,7 @@ export class MarketplaceService {
         })),
       },
       isSaved,
+      isInCart,
     };
   }
 

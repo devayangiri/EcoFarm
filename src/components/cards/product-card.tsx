@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { MapPin, ShieldCheck, Sprout, Waves, Bookmark, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MapPin, ShieldCheck, Sprout, Waves, Bookmark, ShoppingCart, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,9 +28,11 @@ export interface ProductCardProps {
   locationState: string;
   imageUrl?: string | null;
   isSaved?: boolean;
+  isInCart?: boolean;
   isBuyerPortal?: boolean;
+  userRole?: string | null;
   onToggleSave?: (productId: string) => void;
-  onAddToCart?: (productId: string) => void;
+  onAddToCart?: (productId: string) => Promise<void> | void;
 }
 
 export function ProductCard({
@@ -50,15 +53,62 @@ export function ProductCard({
   locationState,
   imageUrl,
   isSaved = false,
+  isInCart = false,
   isBuyerPortal = false,
+  userRole,
   onToggleSave,
   onAddToCart,
 }: ProductCardProps) {
+  const router = useRouter();
+  const [inCart, setInCart] = useState(isInCart);
+  const [isAdding, setIsAdding] = useState(false);
+
+  useEffect(() => {
+    setInCart(isInCart);
+  }, [isInCart]);
+
   const isOutOfStock = availableStock <= 0;
   const targetIdentifier = slug || id;
   const fallback = getProductFallbackImage(sector, category);
   const displayImage = imageUrl || fallback.src;
   const isFallback = !imageUrl;
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userRole && !isBuyerPortal) {
+      router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
+      return;
+    }
+
+    if (inCart) return;
+
+    setIsAdding(true);
+    try {
+      if (onAddToCart) {
+        await onAddToCart(id);
+      } else {
+        const res = await fetch("/api/cart/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: id, quantity: moq || 1 }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.message || "Failed to add to cart");
+        }
+      }
+      setInCart(true);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("cart-updated"));
+      }
+    } catch (err) {
+      console.error("[ProductCard] Add to cart error:", err);
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   return (
     <Card className="group overflow-hidden rounded-xl border border-surface-dim bg-white transition-all hover:shadow-lg hover:border-brand-primary/30 flex flex-col justify-between">
@@ -198,26 +248,63 @@ export function ProductCard({
         <div className="flex items-center gap-2 pt-1">
           <Link href={`/marketplace/${targetIdentifier}`} className="flex-1">
             <Button
-              variant="primary"
+              variant="outline"
               size="sm"
               className="w-full text-xs font-semibold gap-1"
             >
-              View Details
+              Details
             </Button>
           </Link>
 
-          {isBuyerPortal && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              title="Cart functionality coming in Checkout phase"
-              className="text-[11px] px-2.5 h-8 gap-1 opacity-60 cursor-not-allowed text-slate-neutral"
-            >
-              <ShoppingCart className="h-3 w-3" />
-              <span className="hidden sm:inline">Cart soon</span>
-            </Button>
-          )}
+          {(isBuyerPortal || userRole === "BUYER") ? (
+            inCart ? (
+              <div className="flex items-center gap-1.5 flex-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="flex-1 text-[11px] h-8 px-2 bg-brand-primary/5 text-brand-primary border-brand-primary/20 cursor-default font-semibold"
+                >
+                  <Check className="h-3 w-3 mr-1 text-status-success shrink-0" />
+                  <span className="truncate">In Cart</span>
+                </Button>
+                <Link href="/buyer/cart">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="text-[11px] h-8 px-2.5 font-semibold shrink-0"
+                    title="Go to Cart"
+                  >
+                    Cart →
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddToCart}
+                isLoading={isAdding}
+                disabled={isOutOfStock}
+                className="flex-1 text-[11px] h-8 px-2 gap-1 font-semibold"
+              >
+                <ShoppingCart className="h-3 w-3" />
+                <span className="truncate">Add to Cart</span>
+              </Button>
+            )
+          ) : !userRole ? (
+            <Link href={`/login?callbackUrl=/marketplace/${targetIdentifier}`} className="flex-1">
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={isOutOfStock}
+                className="w-full text-[11px] h-8 px-2 gap-1 font-semibold"
+              >
+                <ShoppingCart className="h-3 w-3" />
+                <span className="truncate">Add to Cart</span>
+              </Button>
+            </Link>
+          ) : null}
         </div>
       </div>
     </Card>

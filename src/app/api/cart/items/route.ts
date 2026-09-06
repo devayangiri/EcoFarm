@@ -6,6 +6,20 @@ import { handleError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
+export async function GET(request: NextRequest) {
+  try {
+    const user = await requireRole("BUYER");
+    const productIds = await CartService.getActiveCartProductIds(user.userId);
+
+    return NextResponse.json({
+      success: true,
+      data: productIds,
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await requireRole("BUYER");

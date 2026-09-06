@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/cards/product-card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export interface MarketplaceBrowserProps {
       experienceYears: number | null;
     };
     isSaved?: boolean;
+    isInCart?: boolean;
   }>;
   pagination: {
     total: number;
@@ -82,6 +83,66 @@ export function MarketplaceBrowser({
     });
     return map;
   });
+
+  const [cartStatusMap, setCartStatusMap] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    initialProducts.forEach((p) => {
+      if (p.isInCart) map[p.id] = true;
+    });
+    return map;
+  });
+
+  const syncCartMembership = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cart/items");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          const map: Record<string, boolean> = {};
+          json.data.forEach((id: string) => {
+            map[id] = true;
+          });
+          setCartStatusMap(map);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    syncCartMembership();
+
+    const handleCartUpdated = () => {
+      syncCartMembership();
+    };
+
+    window.addEventListener("cart-updated", handleCartUpdated);
+    return () => {
+      window.removeEventListener("cart-updated", handleCartUpdated);
+    };
+  }, [syncCartMembership]);
+
+  const handleAddToCart = async (productId: string) => {
+    const product = initialProducts.find((p) => p.id === productId);
+    const qty = product?.minimumOrderQuantity || 1;
+
+    try {
+      const res = await fetch("/api/cart/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity: qty }),
+      });
+      if (res.ok) {
+        setCartStatusMap((prev) => ({ ...prev, [productId]: true }));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("cart-updated"));
+        }
+      }
+    } catch (err) {
+      console.error("[MarketplaceBrowser] Failed to add to cart:", err);
+    }
+  };
 
   const updateQueryParams = (newParams: Record<string, string | undefined>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
@@ -273,14 +334,18 @@ export function MarketplaceBrowser({
                   pricePerUnit={prod.pricePerUnit}
                   unit={prod.unit}
                   availableStock={prod.availableStock}
+                  moq={prod.minimumOrderQuantity}
                   sellerName={prod.seller.fullName}
                   isSellerVerified={prod.seller.isVerified}
                   locationDistrict={prod.locationDistrict}
                   locationState={prod.locationState}
                   imageUrl={prod.imageUrl}
                   isSaved={savedStatusMap[prod.id]}
+                  isInCart={cartStatusMap[prod.id]}
                   isBuyerPortal={isBuyerPortal}
+                  userRole={isBuyerPortal ? "BUYER" : undefined}
                   onToggleSave={() => handleToggleSave(prod.id)}
+                  onAddToCart={() => handleAddToCart(prod.id)}
                 />
               </div>
             ))}
