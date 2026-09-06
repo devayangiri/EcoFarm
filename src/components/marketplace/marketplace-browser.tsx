@@ -127,11 +127,13 @@ export function MarketplaceBrowser({
   }, [syncCartMembership]);
 
   const handleAddToCart = async (productId: string) => {
+    console.log("[MarketplaceBrowser handleAddToCart invoked]", { productId, userRole, isBuyerPortal });
     const product = initialProducts.find((p) => p.id === productId);
     const targetIdentifier = product?.slug || productId;
 
     // Unauthenticated Guest -> redirect to login
     if (!userRole && !isBuyerPortal) {
+      console.warn("[MarketplaceBrowser] Unauthenticated guest -> redirecting to login with callbackUrl");
       router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
       return;
     }

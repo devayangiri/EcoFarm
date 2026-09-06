@@ -215,7 +215,7 @@ describe("Phase 4: Stitch UI Components Test Suite", () => {
       );
 
       expect(screen.queryByRole("button", { name: /Add to Cart/i })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Details/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /^Details$/i })).toBeInTheDocument();
     });
 
     it("should render StatCard with title, metric, and percentage trend", () => {

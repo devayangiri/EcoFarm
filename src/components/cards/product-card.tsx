@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { MapPin, ShieldCheck, Sprout, Waves, Bookmark, ShoppingCart, Check, AlertCircle, X } from "lucide-react";
 import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn, formatCurrency } from "@/lib/utils";
 import { getProductFallbackImage } from "@/config/image-assets";
 
 export interface ProductCardProps {
@@ -75,6 +75,7 @@ export function ProductCard({
   const isFallback = !imageUrl;
 
   const handleAddToCart = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log("[ProductCard handleAddToCart invoked]", { id, targetIdentifier, userRole, isBuyerPortal, inCart, isAdding });
     e.preventDefault();
     e.stopPropagation();
 
@@ -115,11 +116,32 @@ export function ProductCard({
   };
 
   return (
-    <article className="group overflow-hidden rounded-xl border border-surface-dim bg-white transition-all hover:shadow-lg hover:border-brand-primary/30 flex flex-col justify-between">
-      {/* Clickable Product Info Link (Image, Title, Specs, Seller, Location) */}
+    <article className="relative group overflow-hidden rounded-xl border border-surface-dim bg-white transition-all hover:shadow-lg hover:border-brand-primary/30 flex flex-col justify-between">
+      {/* Top Save Bookmark Button (Independent, Outside Link, z-20) */}
+      {onToggleSave && (
+        <button
+          type="button"
+          onClick={(e) => {
+            console.log("REAL SAVE CLICK", id);
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleSave(id);
+          }}
+          className={`absolute top-2.5 right-2.5 z-20 p-1.5 rounded-full backdrop-blur-md transition-all ${
+            isSaved
+              ? "bg-brand-primary text-white shadow-sm"
+              : "bg-white/80 text-slate-neutral hover:bg-white hover:text-on-surface shadow-xs"
+          }`}
+          aria-label={isSaved ? "Unsave product" : "Save product"}
+        >
+          <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
+        </button>
+      )}
+
+      {/* Clickable Product Info Link (Image, Title, Specs, Seller, Location) - No Nested Buttons */}
       <Link
         href={`/marketplace/${targetIdentifier}`}
-        className="block focus:outline-none"
+        className="block focus:outline-none relative z-10"
         aria-label={`View details for ${title}`}
       >
         {/* Image & Sector Badge */}
@@ -141,8 +163,8 @@ export function ProductCard({
             </div>
           )}
 
-          {/* Top Badges & Save Button */}
-          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+          {/* Top Sector Badge */}
+          <div className="absolute top-2.5 left-2.5 z-10">
             <Badge variant={sector === "AGRICULTURE" ? "primary" : "secondary"} size="sm">
               {sector === "AGRICULTURE" ? (
                 <>
@@ -156,29 +178,10 @@ export function ProductCard({
                 </>
               )}
             </Badge>
-
-            {onToggleSave && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleSave(id);
-                }}
-                className={`p-1.5 rounded-full backdrop-blur-md transition-all ${
-                  isSaved
-                    ? "bg-brand-primary text-white shadow-sm"
-                    : "bg-white/80 text-slate-neutral hover:bg-white hover:text-on-surface shadow-xs"
-                }`}
-                aria-label={isSaved ? "Unsave product" : "Save product"}
-              >
-                <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
-              </button>
-            )}
           </div>
 
           {isOutOfStock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-on-surface/60 backdrop-blur-xs z-20">
+            <div className="absolute inset-0 flex items-center justify-center bg-on-surface/60 backdrop-blur-xs z-10">
               <Badge variant="error" size="md">Out of Stock</Badge>
             </div>
           )}
@@ -226,8 +229,8 @@ export function ProductCard({
         </CardContent>
       </Link>
 
-      {/* Footer Pricing & Independent CTA (Outside the Link) */}
-      <div className="p-4 pt-0 flex flex-col gap-2.5 border-t border-surface-low mt-2">
+      {/* Footer Pricing & Independent CTA (Outside the Link, z-20) */}
+      <div className="relative z-20 p-4 pt-0 flex flex-col gap-2.5 border-t border-surface-low mt-2">
         <div className="flex items-baseline justify-between pt-2">
           <div>
             <span className="text-[10px] text-slate-neutral uppercase font-heading font-semibold block">
@@ -255,17 +258,10 @@ export function ProductCard({
         <div className="flex items-center gap-2 pt-1">
           <Link
             href={`/marketplace/${targetIdentifier}`}
-            className="flex-1"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1 text-xs font-semibold gap-1")}
             onClick={(e) => e.stopPropagation()}
           >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full text-xs font-semibold gap-1"
-            >
-              Details
-            </Button>
+            Details
           </Link>
 
           {(isBuyerPortal || userRole === "BUYER") ? (
@@ -283,17 +279,11 @@ export function ProductCard({
                 </Button>
                 <Link
                   href="/buyer/cart"
+                  className={cn(buttonVariants({ variant: "primary", size: "sm" }), "text-[11px] h-8 px-2.5 font-semibold shrink-0")}
                   onClick={(e) => e.stopPropagation()}
+                  title="Go to Cart"
                 >
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className="text-[11px] h-8 px-2.5 font-semibold shrink-0"
-                    title="Go to Cart"
-                  >
-                    Cart →
-                  </Button>
+                  Cart →
                 </Link>
               </div>
             ) : (
@@ -301,7 +291,12 @@ export function ProductCard({
                 type="button"
                 variant="primary"
                 size="sm"
-                onClick={handleAddToCart}
+                onClick={(e) => {
+                  console.log("REAL ADD TO CART CLICK", e.currentTarget);
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAddToCart(e);
+                }}
                 isLoading={isAdding}
                 disabled={isOutOfStock || isAdding}
                 className="flex-1 text-[11px] h-8 px-2 gap-1 font-semibold"
@@ -315,7 +310,12 @@ export function ProductCard({
               type="button"
               variant="primary"
               size="sm"
-              onClick={handleAddToCart}
+              onClick={(e) => {
+                console.log("REAL ADD TO CART CLICK", e.currentTarget);
+                e.preventDefault();
+                e.stopPropagation();
+                handleAddToCart(e);
+              }}
               disabled={isOutOfStock}
               className="flex-1 text-[11px] h-8 px-2 gap-1 font-semibold"
             >
