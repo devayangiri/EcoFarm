@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 
 export interface RazorpayOrderResponse {
@@ -21,8 +20,8 @@ export class RazorpayClient {
    * Check whether Razorpay credentials are fully configured on the server
    */
   static isConfigured(): boolean {
-    const keyId = env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const keySecret = env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
+    const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
     return !!(keyId && keySecret && keyId.trim().length > 0 && keySecret.trim().length > 0);
   }
 
@@ -30,14 +29,14 @@ export class RazorpayClient {
    * Return client-safe public Key ID
    */
   static getKeyId(): string | null {
-    return env.NEXT_PUBLIC_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || null;
+    return process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || null;
   }
 
   /**
    * Retrieve private secret (server-side only)
    */
   private static getKeySecret(): string {
-    const secret = env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
+    const secret = process.env.RAZORPAY_KEY_SECRET;
     if (!secret) {
       throw AppError.businessRule("Razorpay gateway is not configured on the server");
     }
@@ -48,7 +47,7 @@ export class RazorpayClient {
    * Retrieve webhook secret (server-side only)
    */
   private static getWebhookSecret(): string {
-    const secret = env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET;
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!secret) {
       throw AppError.businessRule("Razorpay webhook secret is not configured on the server");
     }
