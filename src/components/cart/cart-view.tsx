@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,40 @@ export function CartView({ initialCart }: CartViewProps) {
   const [cart, setCart] = useState(initialCart);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync state if initialCart prop changes from Server Component
+  useEffect(() => {
+    setCart(initialCart);
+  }, [initialCart]);
+
+  // Authoritative re-sync on mount and on global "cart-updated" events
+  // Guarantees fresh data even if Next.js served a prefetched RSC payload
+  const syncCartWithServer = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cart", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setCart(json.data);
+        }
+      }
+    } catch (err) {
+      console.error("[CartView] Error syncing cart with server:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    syncCartWithServer();
+
+    const handleCartUpdated = () => {
+      syncCartWithServer();
+    };
+
+    window.addEventListener("cart-updated", handleCartUpdated);
+    return () => {
+      window.removeEventListener("cart-updated", handleCartUpdated);
+    };
+  }, [syncCartWithServer]);
 
   const handleUpdateQuantity = async (itemId: string, newQty: number, moq: number, stock: number) => {
     if (newQty < moq) {

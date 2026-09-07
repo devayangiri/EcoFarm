@@ -89,6 +89,7 @@ export class BuyerService {
       try {
         const cart = await prisma.cart.findFirst({
           where: { buyerId, status: "ACTIVE" },
+          orderBy: { createdAt: "desc" },
           select: {
             items: { select: { id: true, productId: true } },
           },
@@ -397,6 +398,7 @@ export class BuyerService {
         try {
           const cart = await prisma.cart.findFirst({
             where: { buyerId, status: "ACTIVE" },
+            orderBy: { createdAt: "desc" },
             select: {
               items: {
                 where: { productId: { in: saved.map((s) => s.product.id) } },

@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { CartView } from "@/components/cart/cart-view";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function BuyerCartPage() {
   const user = await requireRole("BUYER");

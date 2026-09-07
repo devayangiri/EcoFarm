@@ -272,6 +272,7 @@ export function Header({
               {userRole?.toUpperCase() === "BUYER" && (
                 <Link
                   href="/buyer/cart"
+                  prefetch={false}
                   className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-surface-dim bg-white text-slate-neutral hover:text-brand-primary hover:bg-surface-low hover:border-brand-primary/30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                   aria-label={`Shopping Cart (${cartCount} items)`}
                 >

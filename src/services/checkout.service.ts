@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { Prisma, PaymentMethod } from "@prisma/client";
 import { InventoryReservationService } from "./inventory-reservation.service";
+import { CartService } from "./cart.service";
 import type { ConfirmCheckoutInput } from "@/lib/validators/checkout.schema";
 
 export class CheckoutService {
@@ -25,20 +26,7 @@ export class CheckoutService {
    * Initiate a checkout session from active cart with 15-minute inventory reservations
    */
   static async initiateCheckout(buyerId: string) {
-    const cart = await prisma.cart.findFirst({
-      where: { buyerId, status: "ACTIVE" },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                seller: { select: { id: true, fullName: true } },
-              },
-            },
-          },
-        },
-      },
-    });
+    const cart = await CartService.getOrCreateCart(buyerId);
 
     if (!cart || cart.items.length === 0) {
       throw AppError.businessRule("Your shopping cart is empty");

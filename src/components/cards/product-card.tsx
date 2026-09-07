@@ -279,6 +279,7 @@ export function ProductCard({
                 </Button>
                 <Link
                   href="/buyer/cart"
+                  prefetch={false}
                   className={cn(buttonVariants({ variant: "primary", size: "sm" }), "text-[11px] h-8 px-2.5 font-semibold shrink-0")}
                   onClick={(e) => e.stopPropagation()}
                   title="Go to Cart"

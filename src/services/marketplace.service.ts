@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { Prisma, ProductStatus, Sector } from "@prisma/client";
 import type { MarketplaceSearchInput } from "@/lib/validators/marketplace.schema";
 import { FEATURES } from "@/config/features";
+import { CartService } from "@/services/cart.service";
 
 export class MarketplaceService {
   /**
@@ -146,18 +147,8 @@ export class MarketplaceService {
     let cartProductIds = new Set<string>();
     if (currentUserId && FEATURES.CART_AND_CHECKOUT) {
       try {
-        const cart = await prisma.cart.findFirst({
-          where: { buyerId: currentUserId, status: "ACTIVE" },
-          select: {
-            items: {
-              where: { productId: { in: items.map((i) => i.id) } },
-              select: { productId: true },
-            },
-          },
-        });
-        if (cart?.items) {
-          cartProductIds = new Set(cart.items.map((c) => c.productId));
-        }
+        const activeIds = await CartService.getActiveCartProductIds(currentUserId);
+        cartProductIds = new Set(activeIds);
       } catch (err) {
         console.warn("[MarketplaceService] Cart items query failed:", err instanceof Error ? err.message : err);
         cartProductIds = new Set<string>();

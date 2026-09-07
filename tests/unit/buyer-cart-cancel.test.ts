@@ -11,10 +11,15 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     cart: {
       findFirst: vi.fn(),
+      create: vi.fn(),
+      deleteMany: vi.fn(),
     },
     cartItem: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
     },
     product: {
       findUnique: vi.fn(),
@@ -645,6 +650,76 @@ describe("Buyer Cart State Sync & Safe Order Cancellation", () => {
       expect(res.items.length).toBe(2);
       expect(res.items[0].product.isInCart).toBe(true);
       expect(res.items[1].product.isInCart).toBe(false);
+    });
+  });
+
+  describe("7. Buyer Cart Persistence & Deterministic Readback", () => {
+    it("addToCart commits item to active cart and getCart reads the exact persisted item", async () => {
+      const mockProduct = {
+        id: "prod-999",
+        title: "Alphonso Mango Lot",
+        sellerId: "seller-farmer-1",
+        status: "ACTIVE",
+        pricePerUnit: new Prisma.Decimal(500),
+        minimumOrderQuantity: new Prisma.Decimal(5),
+        availableStock: new Prisma.Decimal(50),
+      };
+
+      (prisma.product.findUnique as any).mockResolvedValue(mockProduct);
+
+      const mockActiveCart = {
+        id: "cart-active-123",
+        buyerId: "buyer-777",
+        status: "ACTIVE",
+        items: [
+          {
+            id: "cart-item-1",
+            cartId: "cart-active-123",
+            productId: "prod-999",
+            sellerId: "seller-farmer-1",
+            quantity: new Prisma.Decimal(10),
+            product: {
+              ...mockProduct,
+              slug: "alphonso-mango-lot",
+              sector: "AGRICULTURE",
+              category: "FRUITS",
+              unit: "CRATE",
+              images: [{ url: "https://example.com/mango.jpg", isPrimary: true }],
+              seller: { id: "seller-farmer-1", fullName: "Ratnagiri Orchard" },
+            },
+          },
+        ],
+      };
+
+      (prisma.cart.findFirst as any).mockResolvedValue(mockActiveCart);
+      (prisma.cartItem.upsert as any).mockResolvedValue({
+        id: "cart-item-1",
+        cartId: "cart-active-123",
+        productId: "prod-999",
+        quantity: new Prisma.Decimal(10),
+      });
+
+      // 1. Add to cart
+      const addedItem = await CartService.addToCart("buyer-777", {
+        productId: "prod-999",
+        quantity: 10,
+      });
+
+      expect(addedItem.cartId).toBe("cart-active-123");
+      expect(addedItem.productId).toBe("prod-999");
+
+      // 2. Query cart product IDs
+      const productIds = await CartService.getActiveCartProductIds("buyer-777");
+      expect(productIds).toContain("prod-999");
+
+      // 3. Query rendered /buyer/cart data source
+      const cartData = await CartService.getCart("buyer-777");
+      expect(cartData.id).toBe("cart-active-123");
+      expect(cartData.buyerId).toBe("buyer-777");
+      expect(cartData.summary.itemCount).toBe(1);
+      expect(cartData.sellerGroups.length).toBe(1);
+      expect(cartData.sellerGroups[0].items[0].productId).toBe("prod-999");
+      expect(cartData.sellerGroups[0].items[0].productTitle).toBe("Alphonso Mango Lot");
     });
   });
 });

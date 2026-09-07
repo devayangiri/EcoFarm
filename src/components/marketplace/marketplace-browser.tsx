@@ -156,7 +156,7 @@ export function MarketplaceBrowser({
     if (!res.ok || !json.success) {
       if (res.status === 401) {
         router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
-        return;
+        throw new Error("Authentication required. Please sign in.");
       }
       if (res.status === 403) {
         throw new Error("Only registered commercial buyers can place wholesale orders");
@@ -168,6 +168,7 @@ export function MarketplaceBrowser({
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("cart-updated"));
     }
+    router.refresh();
   };
 
   const updateQueryParams = (newParams: Record<string, string | undefined>) => {

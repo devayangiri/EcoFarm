@@ -15,6 +15,7 @@ export class CartService {
 
     let cart = await prisma.cart.findFirst({
       where: { buyerId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
       include: {
         items: {
           include: {
@@ -61,6 +62,7 @@ export class CartService {
     try {
       const cart = await prisma.cart.findFirst({
         where: { buyerId, status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
         select: {
           items: {
             select: { id: true },
@@ -85,6 +87,7 @@ export class CartService {
     try {
       const cart = await prisma.cart.findFirst({
         where: { buyerId, status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
         select: {
           items: {
             select: { productId: true },
@@ -375,6 +378,7 @@ export class CartService {
   static async clearCart(buyerId: string) {
     const cart = await prisma.cart.findFirst({
       where: { buyerId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
     });
 
     if (!cart) return { success: true };

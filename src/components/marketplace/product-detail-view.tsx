@@ -195,6 +195,7 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("cart-updated"));
       }
+      router.refresh();
     } catch (err: any) {
       setCartError(err.message || "An error occurred");
     } finally {
