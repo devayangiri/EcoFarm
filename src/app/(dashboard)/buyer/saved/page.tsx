@@ -4,9 +4,8 @@ import { requireRole } from "@/lib/rbac";
 import { BuyerService } from "@/services/buyer.service";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { ProductCard } from "@/components/cards/product-card";
+import { BuyerSavedProductsGrid } from "@/components/buyer/buyer-saved-products-grid";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Pagination } from "@/components/ui/pagination";
 
 import { FEATURES } from "@/config/features";
 import { Clock } from "lucide-react";
@@ -53,46 +52,7 @@ export default async function BuyerSavedProductsPage({
             actionHref="/buyer/marketplace"
           />
         ) : items.length > 0 ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {items.map((item) => (
-                <ProductCard
-                  key={item.savedId}
-                  id={item.product.id}
-                  slug={item.product.slug}
-                  title={item.product.title}
-                  sector={item.product.sector}
-                  category={item.product.category}
-                  variety={item.product.variety}
-                  pricePerUnit={item.product.pricePerUnit}
-                  unit={item.product.unit}
-                  availableStock={item.product.availableStock}
-                  sellerName={item.product.sellerName}
-                  isSellerVerified={item.product.isSellerVerified}
-                  locationDistrict={item.product.locationDistrict}
-                  locationState={item.product.locationState}
-                  imageUrl={item.product.imageUrl}
-                  moq={item.product.minimumOrderQuantity}
-                  isSaved={true}
-                  isInCart={item.product.isInCart}
-                  isBuyerPortal={true}
-                  userRole="BUYER"
-                />
-              ))}
-            </div>
-
-            {pagination.totalPages > 1 && (
-              <div className="pt-4 border-t border-surface-dim">
-                <Pagination
-                  currentPage={pagination.page}
-                  totalPages={pagination.totalPages}
-                  totalItems={pagination.total}
-                  pageSize={pagination.limit}
-                  onPageChange={() => {}}
-                />
-              </div>
-            )}
-          </div>
+          <BuyerSavedProductsGrid initialItems={items as any} pagination={pagination} />
         ) : (
           <EmptyState
             title="No Saved Products Yet"

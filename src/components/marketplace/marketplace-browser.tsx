@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { Dialog } from "@/components/ui/dialog";
+import { useAddToCart } from "@/hooks/use-add-to-cart";
 import {
   Search,
   SlidersHorizontal,
@@ -126,49 +127,21 @@ export function MarketplaceBrowser({
     };
   }, [syncCartMembership]);
 
+  const { addToCart } = useAddToCart();
+
   const handleAddToCart = async (productId: string) => {
     console.log("[MarketplaceBrowser handleAddToCart invoked]", { productId, userRole, isBuyerPortal });
     const product = initialProducts.find((p) => p.id === productId);
-    const targetIdentifier = product?.slug || productId;
-
-    // Unauthenticated Guest -> redirect to login
-    if (!userRole && !isBuyerPortal) {
-      console.warn("[MarketplaceBrowser] Unauthenticated guest -> redirecting to login with callbackUrl");
-      router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
-      return;
-    }
-
-    // Role check: Non-buyer role attempting to buy
-    if (userRole !== "BUYER" && !isBuyerPortal) {
-      throw new Error("Only registered commercial buyers can place wholesale orders");
-    }
-
     const qty = product?.minimumOrderQuantity || 1;
 
-    const res = await fetch("/api/cart/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, quantity: qty }),
+    await addToCart(productId, {
+      quantity: qty,
+      slug: product?.slug,
+      userRole,
+      isBuyerPortal,
     });
 
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok || !json.success) {
-      if (res.status === 401) {
-        router.push(`/login?callbackUrl=/marketplace/${targetIdentifier}`);
-        throw new Error("Authentication required. Please sign in.");
-      }
-      if (res.status === 403) {
-        throw new Error("Only registered commercial buyers can place wholesale orders");
-      }
-      throw new Error(json.message || "Failed to add commodity lot to cart");
-    }
-
     setCartStatusMap((prev) => ({ ...prev, [productId]: true }));
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("cart-updated"));
-    }
-    router.refresh();
   };
 
   const updateQueryParams = (newParams: Record<string, string | undefined>) => {

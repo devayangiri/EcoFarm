@@ -103,13 +103,15 @@ export function ProductCard({
     setCardError(null);
 
     try {
-      if (onAddToCart) {
-        await onAddToCart(id);
+      if (!onAddToCart) {
+        throw new Error("Add to cart action unavailable");
       }
+      await onAddToCart(id);
       setInCart(true);
     } catch (err: any) {
       console.error("[ProductCard] Add to cart error:", err);
       setCardError(err.message || "Failed to add commodity lot to cart");
+      setInCart(false);
     } finally {
       setIsAdding(false);
     }

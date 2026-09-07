@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { StatGrid } from "@/components/dashboard/stat-grid";
 import { StatCard } from "@/components/cards/stat-card";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { ProductCard } from "@/components/cards/product-card";
+import { BuyerRecommendedProducts } from "@/components/buyer/buyer-recommended-products";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -313,39 +313,7 @@ export default async function BuyerDashboardPage() {
             actionLabel="View All Commodities"
           />
 
-          {recommendedProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {recommendedProducts.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  slug={p.slug}
-                  title={p.title}
-                  sector={p.sector}
-                  category={p.category}
-                  variety={p.variety}
-                  pricePerUnit={p.pricePerUnit}
-                  unit={p.unit}
-                  availableStock={p.availableStock}
-                  sellerName={p.sellerName}
-                  isSellerVerified={p.isSellerVerified}
-                  locationDistrict={p.locationDistrict}
-                  locationState={p.locationState}
-                  imageUrl={p.imageUrl}
-                  isBuyerPortal={true}
-                  isInCart={p.isInCart}
-                  userRole="BUYER"
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="No Products Live Currently"
-              description="Check back soon as verified farmers and hatcheries upload daily harvests."
-              actionLabel="Post Procurement Requirement"
-              actionHref="/buyer/requirements"
-            />
-          )}
+          <BuyerRecommendedProducts initialProducts={recommendedProducts} />
         </div>
 
         {/* Active Procurement Requirements Board Snapshot */}
