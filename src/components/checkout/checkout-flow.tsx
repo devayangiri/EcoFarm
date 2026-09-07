@@ -95,7 +95,36 @@ export function CheckoutFlow({
     pincode: defaultAddress?.pincode || "700001",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER" | "RAZORPAY">("COD");
+  const [isOnlinePaymentEnabled, setIsOnlinePaymentEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/payments/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.enabled) {
+          setIsOnlinePaymentEnabled(true);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load payment config:", err);
+      });
+  }, []);
+
+  const loadRazorpayScript = () => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof window !== "undefined" && (window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   const updateAddress = (field: string, value: string) => {
     setShippingAddress((prev) => ({ ...prev, [field]: value }));
@@ -110,6 +139,98 @@ export function CheckoutFlow({
     setIsLoading(true);
     setErrorMessage(null);
 
+    // Online Payment via Razorpay
+    if (paymentMethod === "RAZORPAY") {
+      try {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded || !(window as any).Razorpay) {
+          throw new Error("Unable to load Razorpay checkout script. Please check your network connection or try COD/Bank Transfer.");
+        }
+
+        const orderRes = await fetch("/api/payments/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            checkoutSessionId: session.id,
+            shippingAddress,
+          }),
+        });
+
+        const orderJson = await orderRes.json();
+        if (!orderRes.ok || !orderJson.success) {
+          throw new Error(orderJson.message || "Failed to initiate online payment");
+        }
+
+        const { razorpayOrderId, amount, currency, keyId, orderGroupId, orderNumber } = orderJson.data;
+
+        const options = {
+          key: keyId,
+          amount,
+          currency: currency || "INR",
+          name: "EcoFarm Wholesale",
+          description: `Order #${orderNumber}`,
+          order_id: razorpayOrderId,
+          prefill: {
+            name: shippingAddress.recipientName || buyerFullName,
+            contact: shippingAddress.recipientPhone || buyerPhone || "",
+          },
+          theme: {
+            color: "#16a34a",
+          },
+          modal: {
+            ondismiss: () => {
+              setIsLoading(false);
+              setErrorMessage("Payment was cancelled or dismissed. Your order has not been confirmed. You may retry payment when ready.");
+            },
+          },
+          handler: async (response: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+          }) => {
+            try {
+              setIsLoading(true);
+              setErrorMessage(null);
+              const verifyRes = await fetch("/api/payments/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderGroupId,
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                }),
+              });
+
+              const verifyJson = await verifyRes.json();
+              if (!verifyRes.ok || !verifyJson.success) {
+                throw new Error(verifyJson.message || "Payment verification failed. Please contact support.");
+              }
+
+              router.push(`/checkout/success?orderNumber=${verifyJson.data?.orderNumber || orderNumber}`);
+            } catch (err: any) {
+              setErrorMessage(err.message || "Failed to verify online payment");
+              setIsLoading(false);
+            }
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on("payment.failed", (failedRes: any) => {
+          setIsLoading(false);
+          setErrorMessage(
+            failedRes.error?.description || "Payment failed or was declined by your bank. Please retry payment or use COD."
+          );
+        });
+        rzp.open();
+      } catch (err: any) {
+        setErrorMessage(err.message || "An unexpected error occurred during payment");
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // COD and BANK_TRANSFER flow (Unchanged)
     try {
       const payload = {
         checkoutSessionId: session.id,
@@ -308,21 +429,46 @@ export function CheckoutFlow({
                 </p>
               </div>
 
-              {/* Online Payment (Gated / Unavailable) */}
-              <div className="p-4 rounded-lg border border-slate-200 bg-slate-50/70 opacity-75 cursor-not-allowed">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-slate-neutral" />
-                    <span className="font-heading font-bold text-sm text-slate-neutral">
-                      Online Gateway (UPI, Cards & Netbanking)
-                    </span>
+              {/* Online Payment (Razorpay) */}
+              {isOnlinePaymentEnabled ? (
+                <div
+                  onClick={() => setPaymentMethod("RAZORPAY")}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    paymentMethod === "RAZORPAY"
+                      ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary"
+                      : "border-surface-dim bg-white hover:bg-surface-low"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-brand-primary" />
+                      <span className="font-heading font-bold text-sm text-on-surface">
+                        Online Payment (UPI, Cards, Netbanking)
+                      </span>
+                      <Badge variant="success" size="sm">Instant & Secure</Badge>
+                    </div>
+                    {paymentMethod === "RAZORPAY" && <CheckCircle2 className="h-4 w-4 text-brand-primary" />}
                   </div>
-                  <Badge variant="secondary" size="sm">Phase 8C Gate</Badge>
+                  <p className="text-xs text-slate-neutral mt-1">
+                    Powered by Razorpay. Fast, 100% encrypted wholesale settlement with immediate payment confirmation.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500 mt-1.5">
-                  Online payment gateway integration is currently in verification and temporarily unavailable. Please proceed with Cash on Delivery or Bank Transfer.
-                </p>
-              </div>
+              ) : (
+                <div className="p-4 rounded-lg border border-slate-200 bg-slate-50/70 opacity-75 cursor-not-allowed">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-slate-neutral" />
+                      <span className="font-heading font-bold text-sm text-slate-neutral">
+                        Online Gateway (UPI, Cards & Netbanking)
+                      </span>
+                    </div>
+                    <Badge variant="secondary" size="sm">Unavailable</Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1.5">
+                    Online payment gateway is temporarily unavailable. Please proceed with Cash on Delivery or Bank Transfer.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-surface-dim">
@@ -349,6 +495,17 @@ export function CheckoutFlow({
                 {shippingAddress.recipientName} ({shippingAddress.recipientPhone})<br />
                 {shippingAddress.villageOrStreet}, {shippingAddress.cityOrTown}, {shippingAddress.district}, {shippingAddress.state} - {shippingAddress.pincode}
               </p>
+            </div>
+
+            <div className="p-3 bg-surface-low rounded-lg border border-surface-dim flex items-center justify-between text-xs">
+              <span className="font-heading font-bold text-on-surface">Payment Method:</span>
+              <span className="font-medium text-brand-primary">
+                {paymentMethod === "RAZORPAY"
+                  ? "Online Payment (Razorpay)"
+                  : paymentMethod === "BANK_TRANSFER"
+                  ? "RTGS / Direct Bank Transfer"
+                  : "Cash on Delivery (COD)"}
+              </span>
             </div>
 
             <div className="space-y-3">
@@ -399,9 +556,17 @@ export function CheckoutFlow({
                 size="lg"
                 onClick={handlePlaceOrder}
                 isLoading={isLoading}
-                rightIcon={<PackageCheck className="h-5 w-5" />}
+                rightIcon={
+                  paymentMethod === "RAZORPAY" ? (
+                    <CreditCard className="h-5 w-5" />
+                  ) : (
+                    <PackageCheck className="h-5 w-5" />
+                  )
+                }
               >
-                Place Multi-Vendor Order
+                {paymentMethod === "RAZORPAY"
+                  ? `Pay ${formatCurrency(session.totalAmount)} & Confirm`
+                  : "Place Multi-Vendor Order"}
               </Button>
             </div>
           </CardContent>

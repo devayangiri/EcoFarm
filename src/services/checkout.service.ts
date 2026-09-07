@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { Prisma, PaymentMethod } from "@prisma/client";
+import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { InventoryReservationService } from "./inventory-reservation.service";
 import { CartService } from "./cart.service";
 import type { ConfirmCheckoutInput } from "@/lib/validators/checkout.schema";
@@ -408,8 +408,13 @@ export class CheckoutService {
         await InventoryReservationService.convertReservation(tx, res.id);
       }
 
-      // 7. Create Payment record linked to OrderGroup
-      const paymentStatus = input.paymentMethod === "COD" ? "PENDING" : "PAID";
+      // 7. Create Payment record linked to OrderGroup (never mark PAID before verified payment)
+      const paymentStatus: PaymentStatus =
+        input.paymentMethod === "COD" ||
+        input.paymentMethod === "BANK_TRANSFER" ||
+        input.paymentMethod === "RAZORPAY"
+          ? "PENDING"
+          : "PAID";
       await tx.payment.create({
         data: {
           orderGroupId: newOrderGroup.id,

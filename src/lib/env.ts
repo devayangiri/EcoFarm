@@ -9,6 +9,10 @@ const envSchema = z.object({
   NEXTAUTH_URL: z.string().url().default("http://localhost:3000"),
   OBJECT_STORAGE_ENDPOINT: z.string().optional(),
   OBJECT_STORAGE_BUCKET: z.string().optional(),
+  RAZORPAY_KEY_ID: z.string().optional(),
+  NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -20,4 +24,8 @@ export const env = envSchema.parse({
   NEXTAUTH_URL: process.env.APP_URL || process.env.NEXTAUTH_URL,
   OBJECT_STORAGE_ENDPOINT: process.env.OBJECT_STORAGE_ENDPOINT,
   OBJECT_STORAGE_BUCKET: process.env.OBJECT_STORAGE_BUCKET,
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+  NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
 });
