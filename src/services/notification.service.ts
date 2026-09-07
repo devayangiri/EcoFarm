@@ -49,6 +49,9 @@ export class NotificationService {
         if (metadata && metadata.role === "SELLER") {
           return resourceId ? `/farmer/orders/${encodeURIComponent(resourceId)}` : "/farmer/orders";
         }
+        if (metadata && metadata.role === "ADMIN") {
+          return resourceId ? `/admin/orders/${encodeURIComponent(resourceId)}` : "/admin/orders";
+        }
         return resourceId ? `/buyer/orders/${encodeURIComponent(resourceId)}` : "/buyer/orders";
       case "PAYMENT_UPDATE":
         return resourceId ? `/buyer/orders/${encodeURIComponent(resourceId)}` : "/buyer/orders";
@@ -135,37 +138,55 @@ export class NotificationService {
     }
 
     // 4. Atomic database persistence
-    const notification = await prisma.$transaction(async (tx) => {
-      const notif = await tx.notification.create({
-        data: {
-          userId: validated.userId,
-          type: validated.type,
-          title: validated.title,
-          body: validated.body,
-          resourceType: validated.resourceType,
-          resourceId: validated.resourceId,
-          deepLink: safeDeepLink,
-          idempotencyKey: validated.idempotencyKey,
-          metadata: validated.metadata ? (validated.metadata as Prisma.InputJsonValue) : undefined,
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorUserId: validated.userId,
-          action: "NOTIFICATION_SENT",
-          resource: "Notification",
-          resourceId: notif.id,
-          metadata: {
+    let notification;
+    try {
+      notification = await prisma.$transaction(async (tx) => {
+        const notif = await tx.notification.create({
+          data: {
+            userId: validated.userId,
             type: validated.type,
-            channels: enabledChannels,
+            title: validated.title,
+            body: validated.body,
+            resourceType: validated.resourceType,
+            resourceId: validated.resourceId,
+            deepLink: safeDeepLink,
             idempotencyKey: validated.idempotencyKey,
+            metadata: validated.metadata ? (validated.metadata as Prisma.InputJsonValue) : undefined,
           },
-        },
-      });
+        });
 
-      return notif;
-    });
+        await tx.auditLog.create({
+          data: {
+            actorUserId: validated.userId,
+            action: "NOTIFICATION_SENT",
+            resource: "Notification",
+            resourceId: notif.id,
+            metadata: {
+              type: validated.type,
+              channels: enabledChannels,
+              idempotencyKey: validated.idempotencyKey,
+            },
+          },
+        });
+
+        return notif;
+      });
+    } catch (err: any) {
+      if (err?.code === "P2002" && validated.idempotencyKey) {
+        const existing = await prisma.notification.findUnique({
+          where: {
+            userId_idempotencyKey: {
+              userId: validated.userId,
+              idempotencyKey: validated.idempotencyKey,
+            },
+          },
+        });
+        if (existing) {
+          return existing;
+        }
+      }
+      throw err;
+    }
 
     // 5. Realtime Channel Dispatch (AFTER database commit)
     await notificationDispatcher.dispatch(

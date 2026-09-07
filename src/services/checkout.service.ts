@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { InventoryReservationService } from "./inventory-reservation.service";
 import { CartService } from "./cart.service";
+import { NotificationService } from "./notification.service";
 import type { ConfirmCheckoutInput } from "@/lib/validators/checkout.schema";
 
 export class CheckoutService {
@@ -384,19 +385,9 @@ export class CheckoutService {
             note: "Order placed by buyer",
           },
         });
-
-        // 5. Create Seller Notification
-        await tx.notification.create({
-          data: {
-            userId: sellerId,
-            type: "ORDER_UPDATE",
-            title: "New Wholesale Order Received",
-            body: `You have received a new purchase order ${subOrderNumber} worth ₹${sellerTotal.toLocaleString("en-IN")}.`,
-          },
-        });
       }
 
-      // 6. Atomically convert reservations for this session
+      // 5. Atomically convert reservations for this session
       const reservations = await tx.inventoryReservation.findMany({
         where: {
           productId: { in: session.cart.items.map((i) => i.productId) },
@@ -408,7 +399,7 @@ export class CheckoutService {
         await InventoryReservationService.convertReservation(tx, res.id);
       }
 
-      // 7. Create Payment record linked to OrderGroup (never mark PAID before verified payment)
+      // 6. Create Payment record linked to OrderGroup (never mark PAID before verified payment)
       const paymentStatus: PaymentStatus =
         input.paymentMethod === "COD" ||
         input.paymentMethod === "BANK_TRANSFER" ||
@@ -425,7 +416,7 @@ export class CheckoutService {
         },
       });
 
-      // 8. Mark checkout session as COMPLETED & clear cart items
+      // 7. Mark checkout session as COMPLETED & clear cart items
       await tx.checkoutSession.update({
         where: { id: session.id },
         data: {
@@ -440,17 +431,7 @@ export class CheckoutService {
         where: { cartId: session.cartId },
       });
 
-      // 9. Buyer Notification
-      await tx.notification.create({
-        data: {
-          userId: buyerId,
-          type: "ORDER_UPDATE",
-          title: "Order Placed Successfully",
-          body: `Your multi-vendor order ${orderNumber} has been placed with ${sellerMap.size} producer(s).`,
-        },
-      });
-
-      // 10. Audit Log
+      // 8. Audit Log
       await tx.auditLog.create({
         data: {
           actorUserId: buyerId,
@@ -468,6 +449,168 @@ export class CheckoutService {
       return newOrderGroup;
     });
 
+    // 9. Post-Transaction Notification Dispatch
+    // Only dispatched AFTER database transaction commits.
+    // Wrapped in try/catch so notification delivery errors NEVER roll back or fail a committed order.
+    try {
+      await this.dispatchOrderCreatedNotifications(orderGroup.id);
+    } catch (notifErr) {
+      console.error("[CheckoutService] Post-checkout notification dispatch error:", notifErr);
+    }
+
     return orderGroup;
+  }
+
+  /**
+   * Dispatch real-time, role-isolated notifications after an order has successfully committed.
+   * Dispatches notifications to Buyer, all individual Farmers (strictly partitioned), and Admins.
+   * Safe to call multiple times due to atomic database uniqueness/idempotency keys.
+   */
+  public static async dispatchOrderCreatedNotifications(orderGroupId: string) {
+    const orderGroup = await prisma.orderGroup.findUnique({
+      where: { id: orderGroupId },
+      include: {
+        buyer: {
+          select: {
+            id: true,
+            fullName: true,
+            buyerProfile: {
+              select: {
+                companyName: true,
+              },
+            },
+          },
+        },
+        payments: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        sellerOrders: {
+          include: {
+            items: true,
+          },
+        },
+      },
+    });
+
+    if (!orderGroup) {
+      return;
+    }
+
+    const paymentMethod = orderGroup.payments[0]?.paymentMethod || "COD";
+    const paymentLabel =
+      paymentMethod === "COD"
+        ? "Cash on Delivery"
+        : paymentMethod === "BANK_TRANSFER"
+        ? "Direct Bank Transfer"
+        : "Online Payment";
+
+    // 1. BUYER NOTIFICATION (Buyer's own order confirmation only)
+    try {
+      const buyerIdempotencyKey = `ORDER_CREATED:${orderGroup.id}:BUYER`;
+      await NotificationService.createNotificationFromEvent({
+        userId: orderGroup.buyerId,
+        type: "ORDER_UPDATE",
+        title: "Order Confirmed",
+        body: `Your ${paymentLabel} order #${orderGroup.orderNumber} has been placed successfully.`,
+        resourceType: "ORDER_GROUP",
+        resourceId: orderGroup.id,
+        deepLink: `/buyer/orders/${orderGroup.id}`,
+        idempotencyKey: buyerIdempotencyKey,
+        metadata: {
+          orderGroupId: orderGroup.id,
+          orderNumber: orderGroup.orderNumber,
+          total: orderGroup.totalAmount.toNumber(),
+          paymentMethod,
+          sellerCount: orderGroup.sellerOrders.length,
+          status: orderGroup.status,
+          role: "BUYER",
+        },
+      });
+    } catch (err) {
+      console.error("[dispatchOrderCreatedNotifications] Failed to send buyer notification:", err);
+    }
+
+    // 2. FARMER / SELLER NOTIFICATIONS (Strict multi-vendor isolation per seller sub-order)
+    for (const subOrder of orderGroup.sellerOrders) {
+      try {
+        const farmerIdempotencyKey = `ORDER_CREATED:${subOrder.id}:FARMER:${subOrder.sellerId}`;
+
+        // Build product summary for this seller's items only
+        const firstItem = subOrder.items[0];
+        const productInfo = firstItem ? firstItem.productTitleSnapshot : "Wholesale Produce";
+        const quantityInfo = firstItem ? `${firstItem.quantity.toNumber()} ${firstItem.unitSnapshot}` : "";
+        const itemSummary =
+          subOrder.items.length > 1
+            ? `${productInfo} (+${subOrder.items.length - 1} other item${subOrder.items.length > 2 ? "s" : ""})`
+            : productInfo;
+
+        await NotificationService.createNotificationFromEvent({
+          userId: subOrder.sellerId,
+          type: "ORDER_UPDATE",
+          title: "New Order Received",
+          body: `You received a new order for ${itemSummary}. Order #${subOrder.subOrderNumber}, Amount: ₹${subOrder.sellerTotal.toNumber().toLocaleString("en-IN")}. (${paymentLabel})`,
+          resourceType: "ORDER",
+          resourceId: subOrder.id,
+          deepLink: `/farmer/orders/${subOrder.id}`,
+          idempotencyKey: farmerIdempotencyKey,
+          metadata: {
+            orderId: subOrder.id,
+            orderGroupId: orderGroup.id,
+            subOrderNumber: subOrder.subOrderNumber,
+            productInfo,
+            quantity: quantityInfo,
+            sellerTotal: subOrder.sellerTotal.toNumber(),
+            paymentMethod,
+            createdAt: subOrder.createdAt,
+            role: "SELLER",
+          },
+        });
+      } catch (err) {
+        console.error(
+          `[dispatchOrderCreatedNotifications] Failed to send seller notification for subOrder ${subOrder.id}:`,
+          err
+        );
+      }
+    }
+
+    // 3. ADMIN NOTIFICATION (Aggregate multi-vendor overview)
+    try {
+      const adminUsers = await prisma.user.findMany({
+        where: { role: "ADMIN", status: "ACTIVE" },
+        select: { id: true },
+      });
+
+      const buyerName =
+        orderGroup.buyer.buyerProfile?.companyName || orderGroup.buyer.fullName || "Buyer";
+
+      for (const admin of adminUsers) {
+        const adminIdempotencyKey = `ORDER_CREATED:${orderGroup.id}:ADMIN:${admin.id}`;
+        await NotificationService.createNotificationFromEvent({
+          userId: admin.id,
+          type: "ORDER_UPDATE",
+          title: paymentMethod === "COD" ? "New COD Order" : "New Order Created",
+          body: `New ${paymentLabel} order #${orderGroup.orderNumber} has been placed by ${buyerName} (₹${orderGroup.totalAmount.toNumber().toLocaleString("en-IN")}, ${orderGroup.sellerOrders.length} seller(s)).`,
+          resourceType: "ORDER_GROUP",
+          resourceId: orderGroup.id,
+          deepLink: `/admin/orders/${orderGroup.id}`,
+          idempotencyKey: adminIdempotencyKey,
+          metadata: {
+            orderGroupId: orderGroup.id,
+            orderNumber: orderGroup.orderNumber,
+            buyerName,
+            buyerId: orderGroup.buyerId,
+            sellerCount: orderGroup.sellerOrders.length,
+            totalOrderValue: orderGroup.totalAmount.toNumber(),
+            paymentMethod,
+            status: orderGroup.status,
+            createdAt: orderGroup.createdAt,
+            role: "ADMIN",
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[dispatchOrderCreatedNotifications] Failed to send admin notification:", err);
+    }
   }
 }

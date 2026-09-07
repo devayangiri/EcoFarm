@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Sprout,
@@ -32,11 +32,52 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(unreadNotifications);
+
+  useEffect(() => {
+    setUnreadNotifCount(unreadNotifications);
+  }, [unreadNotifications]);
 
   const isAuthenticated =
     Boolean(userRole) &&
     (userRole || "").toUpperCase() !== "GUEST" &&
     (userRole || "").toLowerCase() !== "welcome";
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchUnreadNotifications = async () => {
+        try {
+          const res = await fetch("/api/notifications/unread-count");
+          const data = await res.json();
+          if (data?.success && typeof data?.data?.unreadCount === "number") {
+            setUnreadNotifCount(data.data.unreadCount);
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      fetchUnreadNotifications();
+
+      let eventSource: EventSource | null = null;
+      try {
+        eventSource = new EventSource("/api/messages/events");
+        eventSource.addEventListener("NOTIFICATION_CREATED", () => {
+          fetchUnreadNotifications();
+        });
+      } catch {}
+
+      const handleNotificationUpdated = () => {
+        fetchUnreadNotifications();
+      };
+      window.addEventListener("notification-updated", handleNotificationUpdated);
+
+      return () => {
+        if (eventSource) eventSource.close();
+        window.removeEventListener("notification-updated", handleNotificationUpdated);
+      };
+    }
+  }, [isAuthenticated]);
 
   const getDashboardHref = (role: string) => {
     switch ((role || "").toUpperCase()) {
@@ -107,10 +148,10 @@ export function MobileHeader({
             <Link
               href="/notifications"
               className="relative flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
-              aria-label={`Notifications (${unreadNotifications} unread)`}
+              aria-label={`Notifications (${unreadNotifCount} unread)`}
             >
               <Bell className="h-5 w-5" />
-              {unreadNotifications > 0 && (
+              {unreadNotifCount > 0 && (
                 <span className="absolute top-2 right-2 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-status-error"></span>

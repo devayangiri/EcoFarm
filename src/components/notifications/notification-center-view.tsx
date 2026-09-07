@@ -134,6 +134,9 @@ export function NotificationCenterView({
           prev.map((n) => (n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n))
         );
         setUnreadCount((c) => Math.max(0, c - 1));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("notification-updated"));
+        }
       }
     } catch {}
   };
@@ -147,6 +150,9 @@ export function NotificationCenterView({
           prev.map((n) => (n.id === id ? { ...n, isRead: false, readAt: null } : n))
         );
         setUnreadCount((c) => c + 1);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("notification-updated"));
+        }
       }
     } catch {}
   };
@@ -160,6 +166,9 @@ export function NotificationCenterView({
           prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
         );
         setUnreadCount(0);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("notification-updated"));
+        }
       }
     } catch {}
   };

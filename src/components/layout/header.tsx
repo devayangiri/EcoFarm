@@ -44,12 +44,64 @@ export function Header({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [headerSearch, setHeaderSearch] = useState("");
   const [cartCount, setCartCount] = useState(cartItemCount);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(unreadNotifications);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Sync cartCount for BUYER role
   useEffect(() => {
     setCartCount(cartItemCount);
   }, [cartItemCount]);
+
+  // Sync unreadNotifCount prop
+  useEffect(() => {
+    setUnreadNotifCount(unreadNotifications);
+  }, [unreadNotifications]);
+
+  const isAuthenticated =
+    Boolean(userRole) &&
+    (userRole || "").toUpperCase() !== "GUEST" &&
+    (userRole || "").toLowerCase() !== "welcome";
+
+  // Reactive unread notification count synchronization via SSE and REST
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchUnreadNotifications = async () => {
+        try {
+          const res = await fetch("/api/notifications/unread-count");
+          const data = await res.json();
+          if (data?.success && typeof data?.data?.unreadCount === "number") {
+            setUnreadNotifCount(data.data.unreadCount);
+          }
+        } catch {
+          // ignore network errors
+        }
+      };
+
+      fetchUnreadNotifications();
+
+      let eventSource: EventSource | null = null;
+      try {
+        eventSource = new EventSource("/api/messages/events");
+        eventSource.addEventListener("NOTIFICATION_CREATED", () => {
+          fetchUnreadNotifications();
+        });
+      } catch {
+        // SSE not supported or network error
+      }
+
+      const handleNotificationUpdated = () => {
+        fetchUnreadNotifications();
+      };
+      window.addEventListener("notification-updated", handleNotificationUpdated);
+
+      return () => {
+        if (eventSource) {
+          eventSource.close();
+        }
+        window.removeEventListener("notification-updated", handleNotificationUpdated);
+      };
+    }
+  }, [isAuthenticated, pathname]);
 
   useEffect(() => {
     if (userRole?.toUpperCase() === "BUYER") {
@@ -109,11 +161,6 @@ export function Header({
     setHeaderSearch("");
     searchInputRef.current?.focus();
   };
-
-  const isAuthenticated =
-    Boolean(userRole) &&
-    (userRole || "").toUpperCase() !== "GUEST" &&
-    (userRole || "").toLowerCase() !== "welcome";
 
   const getDashboardHref = (role: string) => {
     switch ((role || "").toUpperCase()) {
@@ -289,12 +336,12 @@ export function Header({
               <Link
                 href="/notifications"
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-surface-dim bg-white text-slate-neutral hover:text-brand-primary hover:bg-surface-low hover:border-brand-primary/30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
-                aria-label={`Notifications (${unreadNotifications} unread)`}
+                aria-label={`Notifications (${unreadNotifCount} unread)`}
               >
                 <Bell className="h-4 w-4" />
-                {unreadNotifications > 0 && (
+                {unreadNotifCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-status-error px-1 text-[9px] font-bold text-white shadow-sm">
-                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                    {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
                   </span>
                 )}
               </Link>
