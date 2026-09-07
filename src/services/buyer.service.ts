@@ -52,6 +52,7 @@ export class BuyerService {
           pricePerUnit: true,
           unit: true,
           availableStock: true,
+          minimumOrderQuantity: true,
           locationDistrict: true,
           locationState: true,
           images: {
@@ -196,6 +197,7 @@ export class BuyerService {
         pricePerUnit: p.pricePerUnit.toNumber(),
         unit: p.unit,
         availableStock: p.availableStock.toNumber(),
+        minimumOrderQuantity: p.minimumOrderQuantity.toNumber(),
         locationDistrict: p.locationDistrict,
         locationState: p.locationState,
         imageUrl: p.images[0]?.url || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
