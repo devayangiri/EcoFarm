@@ -49,5 +49,5 @@ Thumbs.db
 # TypeScript & Local logs
 *.tsbuildinfo
 *.log
-dev.log
 /scratch/
+/scripts/
