@@ -190,7 +190,7 @@ export function ProductCard({
         </div>
 
         {/* Content Body */}
-        <CardContent className="p-4 space-y-2.5">
+        <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-heading font-semibold uppercase tracking-wider text-brand-secondary">
@@ -199,11 +199,11 @@ export function ProductCard({
               <span className="text-slate-neutral/70 text-[10px]">No reviews yet</span>
             </div>
 
-            <h3 className="font-heading text-sm sm:text-base font-bold text-on-surface line-clamp-1 group-hover:text-brand-primary transition-colors">
+            <h3 className="font-heading text-xs sm:text-base font-bold text-on-surface line-clamp-1 group-hover:text-brand-primary transition-colors">
               {title}
             </h3>
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-neutral">
+            <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 text-[11px] sm:text-xs text-slate-neutral">
               {variety && (
                 <span>Variety: <strong className="text-on-surface font-medium">{variety}</strong></span>
               )}
@@ -217,8 +217,8 @@ export function ProductCard({
           </div>
 
           {/* Seller & Location */}
-          <div className="flex items-center justify-between text-[11px] text-slate-neutral pt-2 border-t border-surface-dim">
-            <div className="flex items-center gap-1 truncate max-w-[140px]">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-neutral pt-2 border-t border-surface-dim">
+            <div className="flex items-center gap-1 truncate max-w-[120px] sm:max-w-[140px]">
               <span className="truncate">{sellerName}</span>
               {isSellerVerified && <ShieldCheck className="h-3 w-3 text-status-success shrink-0" />}
             </div>
@@ -232,7 +232,7 @@ export function ProductCard({
       </Link>
 
       {/* Footer Pricing & Independent CTA (Outside the Link, z-20) */}
-      <div className="relative z-20 p-4 pt-0 flex flex-col gap-2.5 border-t border-surface-low mt-2">
+      <div className="relative z-20 p-3 sm:p-4 pt-0 flex flex-col gap-2 sm:gap-2.5 border-t border-surface-low mt-2">
         <div className="flex items-baseline justify-between pt-2">
           <div>
             <span className="text-[10px] text-slate-neutral uppercase font-heading font-semibold block">

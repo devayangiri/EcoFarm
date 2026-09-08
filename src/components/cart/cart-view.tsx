@@ -195,7 +195,7 @@ export function CartView({ initialCart }: CartViewProps) {
   }
 
   return (
-    <div className="space-y-6 font-body text-left">
+    <div className="space-y-6 font-body text-left pb-32 lg:pb-8">
       {errorMessage && (
         <Alert variant="error" onDismiss={() => setErrorMessage(null)}>
           {errorMessage}
@@ -345,6 +345,29 @@ export function CartView({ initialCart }: CartViewProps) {
             </Button>
           </Card>
         </div>
+      </div>
+
+      {/* Mobile Sticky Checkout Bar (Visible on mobile below lg) */}
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 bg-white/98 backdrop-blur-md border-t border-surface-dim p-3 px-4 flex items-center justify-between gap-3 shadow-stitch-modal">
+        <div>
+          <span className="text-[10px] uppercase font-bold text-slate-neutral block leading-none">
+            {cart.summary.itemCount} {cart.summary.itemCount === 1 ? "Lot" : "Lots"} • Total
+          </span>
+          <span className="font-heading font-extrabold text-base text-brand-primary block mt-0.5">
+            {formatCurrency(cart.summary.grandTotal)}
+          </span>
+        </div>
+
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleProceedToCheckout}
+          isLoading={isLoading}
+          className="min-h-[42px] px-5 text-xs font-bold shadow-sm"
+          rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+        >
+          Checkout
+        </Button>
       </div>
     </div>
   );

@@ -27,6 +27,7 @@ import {
   Sprout,
   Waves,
   Clock,
+  Sparkles,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -67,7 +68,152 @@ export default async function BuyerDashboardPage() {
 
   return (
     <AppShell showSidebar userRole="BUYER" userName={user.fullName} currentPath="/buyer">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-stitch-container mx-auto space-y-8 font-body">
+      {/* MOBILE BUYER PORTAL (< md) */}
+      <div className="block md:hidden px-4 py-4 space-y-4 font-body pb-24">
+        {/* Greeting & Role */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-heading font-extrabold text-lg text-on-surface">
+              Hello, {user.fullName.split(" ")[0]} 👋
+            </h1>
+            <p className="text-xs text-slate-neutral">Procurement & Wholesale Hub</p>
+          </div>
+          <Badge variant="secondary" size="sm">Commercial Buyer</Badge>
+        </div>
+
+        {/* Mobile Search */}
+        <form action="/buyer/marketplace" method="GET" className="relative flex items-center">
+          <Search className="absolute left-3 h-4 w-4 text-slate-neutral pointer-events-none" />
+          <input
+            type="text"
+            name="search"
+            placeholder="Search commodities, crops, fish..."
+            className="w-full h-10 pl-9 pr-16 rounded-xl border border-surface-dim bg-white text-xs text-on-surface placeholder:text-slate-neutral/60 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+          />
+          <button
+            type="submit"
+            className="absolute right-1.5 px-2.5 py-1 text-xs font-bold text-white bg-brand-primary rounded-lg"
+          >
+            Search
+          </button>
+        </form>
+
+        {/* 3 High-Impact KPI Metrics */}
+        <div className="grid grid-cols-3 gap-2">
+          <Link
+            href="/buyer/cart"
+            className="p-2.5 rounded-xl bg-white border border-surface-dim shadow-xs active:scale-95 transition-transform"
+          >
+            <div className="flex items-center gap-1.5 text-brand-secondary">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="font-heading font-black text-base">{metrics.cartItems}</span>
+            </div>
+            <span className="text-[10px] font-semibold text-slate-neutral block mt-0.5">In Cart</span>
+          </Link>
+
+          <Link
+            href="/buyer/orders"
+            className="p-2.5 rounded-xl bg-white border border-surface-dim shadow-xs active:scale-95 transition-transform"
+          >
+            <div className="flex items-center gap-1.5 text-emerald-700">
+              <Package className="h-4 w-4" />
+              <span className="font-heading font-black text-base">{metrics.activeOrders}</span>
+            </div>
+            <span className="text-[10px] font-semibold text-slate-neutral block mt-0.5">Orders</span>
+          </Link>
+
+          <Link
+            href="/buyer/saved"
+            className="p-2.5 rounded-xl bg-white border border-surface-dim shadow-xs active:scale-95 transition-transform"
+          >
+            <div className="flex items-center gap-1.5 text-brand-primary">
+              <Bookmark className="h-4 w-4" />
+              <span className="font-heading font-black text-base">{metrics.savedProducts}</span>
+            </div>
+            <span className="text-[10px] font-semibold text-slate-neutral block mt-0.5">Saved Lots</span>
+          </Link>
+        </div>
+
+        {/* 4 Quick Action Tiles */}
+        <div className="grid grid-cols-4 gap-2 text-center pt-1">
+          <Link
+            href="/buyer/marketplace"
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border border-surface-dim/70 shadow-xs"
+          >
+            <div className="h-9 w-9 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center">
+              <ShoppingBag className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-semibold text-on-surface">Shop</span>
+          </Link>
+
+          <Link
+            href="/buyer/orders"
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border border-surface-dim/70 shadow-xs"
+          >
+            <div className="h-9 w-9 rounded-lg bg-brand-secondary/15 text-brand-secondary flex items-center justify-center">
+              <Package className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-semibold text-on-surface">Orders</span>
+          </Link>
+
+          <Link
+            href="/buyer/saved"
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border border-surface-dim/70 shadow-xs"
+          >
+            <div className="h-9 w-9 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center">
+              <Bookmark className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-semibold text-on-surface">Saved</span>
+          </Link>
+
+          <Link
+            href="/messages"
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border border-surface-dim/70 shadow-xs"
+          >
+            <div className="h-9 w-9 rounded-lg bg-status-success/15 text-emerald-700 flex items-center justify-center">
+              <MessageSquare className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-semibold text-on-surface">Messages</span>
+          </Link>
+        </div>
+
+        {/* EcoFarm AI Procurement Advisory */}
+        <Link
+          href="/ai"
+          className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-xs active:scale-[0.98] transition-transform"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-white">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="font-heading text-xs font-bold leading-tight">Ask EcoFarm AI</div>
+              <div className="text-[10px] text-emerald-100 leading-tight">Sourcing & procurement advisory</div>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-emerald-200" />
+        </Link>
+
+        {/* Recommended Commodities */}
+        <div className="pt-2 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading font-bold text-sm text-on-surface">
+              Fresh Market Harvests
+            </h2>
+            <Link
+              href="/buyer/marketplace"
+              className="text-[11px] font-semibold text-brand-primary flex items-center gap-0.5"
+            >
+              <span>View All</span>
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <BuyerRecommendedProducts initialProducts={recommendedProducts} />
+        </div>
+      </div>
+
+      {/* DESKTOP BUYER HUB (>= md) — 100% UNCHANGED */}
+      <div className="hidden md:block p-4 sm:p-6 lg:p-8 max-w-stitch-container mx-auto space-y-8 font-body">
         {/* Page Header */}
         <PageHeader
           title="Buyer Procurement Hub"
@@ -216,7 +362,7 @@ export default async function BuyerDashboardPage() {
           <h2 className="text-xs font-heading font-bold uppercase tracking-wider text-slate-neutral">
             Quick Actions
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <Link href="/buyer/marketplace" className="block">
               <Card className="hover:border-brand-primary/40 hover:shadow-sm transition-all p-4 text-left group">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary mb-2 group-hover:scale-105 transition-transform">
@@ -258,6 +404,16 @@ export default async function BuyerDashboardPage() {
                 </div>
                 <div className="font-heading text-xs font-bold text-on-surface">Saved Lots</div>
                 <div className="text-[11px] text-slate-neutral mt-0.5">{metrics.savedProducts} Saved Lots</div>
+              </Card>
+            </Link>
+
+            <Link href="/ai" className="block">
+              <Card className="hover:border-emerald-500/40 hover:shadow-sm transition-all p-4 text-left group bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border-emerald-200/70">
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 mb-2 group-hover:scale-105 transition-transform">
+                  <Sparkles className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div className="font-heading text-xs font-bold text-on-surface">Ask EcoFarm AI</div>
+                <div className="text-[11px] text-emerald-800/80 mt-0.5">Sourcing & Procurement</div>
               </Card>
             </Link>
           </div>

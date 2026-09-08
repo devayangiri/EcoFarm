@@ -1,0 +1,140 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/rbac";
+import { env } from "@/lib/env";
+import { ChatRequestSchema, extractResponseContent } from "@/lib/ai-chat";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(req: NextRequest) {
+  try {
+    const rawBody = await req.json().catch(() => null);
+    const parsed = ChatRequestSchema.safeParse(rawBody);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: parsed.error.issues[0]?.message || "Invalid request body",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { message, sessionId } = parsed.data;
+
+    // Authoritative Server-Side User Session Extraction (RBAC)
+    // Never trust client-submitted userId or role
+    const session = await getCurrentUser();
+    const userId = session?.userId ?? null;
+    const userRole = session?.role ?? null;
+
+    const webhookUrl = env.ECOFARM_AI_WEBHOOK_URL || "http://localhost:5678/webhook/c94f1e8a-fb4a-48b6-8d3f-7c592fb9937f";
+
+    // Request Payload matching exact n8n AI workflow specification
+    const n8nPayload = {
+      sessionId,
+      userId,
+      userRole,
+      message,
+      context: {
+        source: "ecofarm",
+      },
+    };
+
+    console.log("[EcoFarm AI] Dispatching to n8n webhook:", {
+      webhookUrl,
+      sessionId,
+      userId,
+      userRole,
+      messageLength: message.length,
+    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 40000); // 40s timeout for LLM reasoning
+
+    try {
+      const n8nRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/plain, */*",
+        },
+        body: JSON.stringify(n8nPayload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!n8nRes.ok) {
+        console.error(`[EcoFarm AI] n8n returned error status ${n8nRes.status}: ${n8nRes.statusText}`);
+        return NextResponse.json(
+          {
+            success: false,
+            message: "EcoFarm AI is temporarily unavailable. Please try again.",
+          },
+          { status: 502 }
+        );
+      }
+
+      const contentType = n8nRes.headers.get("content-type") || "";
+      let responseText: string | null = null;
+
+      if (contentType.includes("application/json")) {
+        const json = await n8nRes.json().catch(() => null);
+        responseText = extractResponseContent(json);
+      } else {
+        const text = await n8nRes.text().catch(() => null);
+        // Sometimes n8n returns JSON with text/plain header
+        try {
+          const parsedJson = JSON.parse(text || "");
+          responseText = extractResponseContent(parsedJson);
+        } catch {
+          responseText = extractResponseContent(text);
+        }
+      }
+
+      if (!responseText) {
+        console.warn("[EcoFarm AI] n8n returned empty or unparseable response payload");
+        return NextResponse.json(
+          {
+            success: false,
+            message: "EcoFarm AI is temporarily unavailable. Please try again.",
+          },
+          { status: 502 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: responseText,
+        sessionId,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(timeoutId);
+      const isTimeout = fetchErr?.name === "AbortError";
+      console.error("[EcoFarm AI] Network failure communicating with n8n:", {
+        isTimeout,
+        error: fetchErr?.message || String(fetchErr),
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: isTimeout
+            ? "EcoFarm AI request timed out. Please try again."
+            : "EcoFarm AI is temporarily unavailable. Please try again.",
+        },
+        { status: 504 }
+      );
+    }
+  } catch (err: any) {
+    console.error("[EcoFarm AI] Unhandled error in /api/ai/chat:", err);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "EcoFarm AI is temporarily unavailable. Please try again.",
+      },
+      { status: 500 }
+    );
+  }
+}

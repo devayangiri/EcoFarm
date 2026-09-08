@@ -318,10 +318,41 @@ export function MarketplaceBrowser({
         </div>
       </div>
 
+      {/* Mobile Horizontal Category Chips */}
+      {facets?.categories && facets.categories.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mt-1 sm:hidden scrollbar-none">
+          <button
+            type="button"
+            onClick={() => updateQueryParams({ category: "" })}
+            className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-colors ${
+              !activeCategory
+                ? "bg-brand-primary text-white"
+                : "bg-surface-low border border-surface-dim text-slate-neutral"
+            }`}
+          >
+            All
+          </button>
+          {facets.categories.slice(0, 8).map((c) => (
+            <button
+              key={c.category}
+              type="button"
+              onClick={() => updateQueryParams({ category: c.category })}
+              className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-colors ${
+                activeCategory === c.category
+                  ? "bg-brand-primary text-white"
+                  : "bg-surface-low border border-surface-dim text-slate-neutral"
+              }`}
+            >
+              {c.category}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Product Results Grid */}
       {initialProducts.length > 0 ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-5">
             {initialProducts.map((prod) => (
               <div key={prod.id} className="relative group">
                 <ProductCard

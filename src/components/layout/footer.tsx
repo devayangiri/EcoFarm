@@ -5,8 +5,8 @@ import { Sprout, Waves, Smartphone, ArrowUpRight } from "lucide-react";
 export function Footer() {
   return (
     <footer className="w-full border-t border-surface-dim bg-white text-slate-neutral font-body">
-      {/* Top Main Navigation Grid */}
-      <div className="mx-auto max-w-stitch-container px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+      {/* Desktop Main Navigation Grid */}
+      <div className="hidden md:block mx-auto max-w-stitch-container px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
           {/* Column 1: Brand & Mission */}
           <div className="space-y-4 lg:col-span-1">
@@ -279,6 +279,26 @@ export function Footer() {
             </a>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Compact Footer Strip (Hidden on Desktop) */}
+      <div className="block md:hidden border-t border-surface-dim bg-white px-4 py-6 pb-28 text-center text-xs text-slate-neutral/70">
+        <div className="flex items-center justify-center gap-1.5 font-heading font-bold text-brand-primary mb-2">
+          <span>Eco</span>
+          <Waves className="h-3.5 w-3.5 text-brand-secondary" />
+          <span className="text-on-surface">Farm</span>
+          <span className="text-[11px] font-normal text-slate-neutral/80">— Connect. Trade. Grow.</span>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3 text-[11px] text-slate-neutral/80 mb-3">
+          <Link href="/marketplace" className="hover:text-brand-primary">Marketplace</Link>
+          <span>•</span>
+          <Link href="/services" className="hover:text-brand-primary">Services</Link>
+          <span>•</span>
+          <a href="https://ayangiri.com/privacy-policy/" target="_blank" rel="noopener noreferrer" className="hover:text-brand-primary">Privacy</a>
+          <span>•</span>
+          <a href="https://ayangiri.com/terms/" target="_blank" rel="noopener noreferrer" className="hover:text-brand-primary">Terms</a>
+        </div>
+        <p className="text-[10px] text-slate-neutral/60">© 2026 EcoFarm. All rights reserved.</p>
       </div>
     </footer>
   );

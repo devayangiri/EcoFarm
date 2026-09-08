@@ -278,7 +278,7 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
   };
 
   return (
-    <div className="space-y-6 font-body text-left">
+    <div className="space-y-6 font-body text-left pb-32 md:pb-6">
       {/* Top Breadcrumb & Navigation */}
       <div className="flex items-center justify-between">
         <Link
@@ -752,46 +752,60 @@ export function ProductDetailView({ product, currentUserRole }: ProductDetailVie
 
       {/* Mobile Sticky Procurement Bar (Visible only on mobile below lg) */}
       {product.availableStock > 0 && (
-        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t border-surface-dim p-3 px-4 flex items-center justify-between gap-3 shadow-stitch-modal pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-neutral block">Unit Price</span>
-            <span className="font-heading font-bold text-base text-brand-primary">
-              {formatCurrency(product.pricePerUnit)}
-              <span className="text-xs font-normal text-slate-neutral">/{product.unit}</span>
-            </span>
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 bg-white/98 backdrop-blur-md border-t border-surface-dim p-2.5 px-3 flex items-center justify-between gap-2 shadow-stitch-modal">
+          <div className="shrink-0">
+            <span className="text-[10px] uppercase font-bold text-slate-neutral block leading-none">Price</span>
+            <div className="flex items-baseline gap-0.5 mt-0.5">
+              <span className="font-heading font-extrabold text-sm text-brand-primary">
+                {formatCurrency(product.pricePerUnit)}
+              </span>
+              <span className="text-[10px] text-slate-neutral">/{product.unit}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-1 justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsInquiryOpen(true)}
-              className="min-h-[44px] px-3 text-xs"
+              className="min-h-[40px] px-2.5 text-xs shrink-0 text-slate-neutral"
               aria-label="Send Inquiry"
             >
               <MessageSquare className="h-4 w-4" />
             </Button>
+
             {isInCart ? (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => router.push("/buyer/cart")}
-                className="min-h-[44px] px-3 text-xs font-bold border-brand-primary text-brand-primary bg-brand-primary/5"
-                rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+                className="min-h-[40px] px-3 text-xs font-bold border-brand-primary text-brand-primary bg-brand-primary/5 flex-1 max-w-[130px]"
+                rightIcon={<ArrowRight className="h-3 w-3" />}
               >
                 In Cart
               </Button>
             ) : (
               <Button
-                variant="primary"
+                variant="outline"
                 size="sm"
                 onClick={handleAddToCart}
                 isLoading={isAddingToCart}
-                className="min-h-[44px] px-4 text-xs font-bold"
+                className="min-h-[40px] px-3 text-xs font-bold border-brand-primary text-brand-primary hover:bg-brand-primary/5 flex-1 max-w-[130px]"
               >
                 {cartSuccess ? "Added ✓" : "Add to Cart"}
               </Button>
             )}
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleBuyNow}
+              isLoading={isBuyingNow}
+              className="min-h-[40px] px-3 text-xs font-bold flex-1 max-w-[130px]"
+              leftIcon={<Zap className="h-3.5 w-3.5" />}
+            >
+              Buy Now
+            </Button>
           </div>
         </div>
       )}

@@ -16,6 +16,9 @@ import {
   HelpCircle,
   LogOut,
   LayoutDashboard,
+  ShoppingCart,
+  Download,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +36,7 @@ export function MobileHeader({
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(unreadNotifications);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     setUnreadNotifCount(unreadNotifications);
@@ -43,6 +47,26 @@ export function MobileHeader({
     (userRole || "").toUpperCase() !== "GUEST" &&
     (userRole || "").toLowerCase() !== "welcome";
 
+  // Real-time Cart Count synchronization
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const res = await fetch("/api/cart/count");
+        const data = await res.json();
+        if (data?.success && typeof data?.count === "number") {
+          setCartCount(data.count);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchCartCount();
+    window.addEventListener("cart-updated", fetchCartCount);
+    return () => window.removeEventListener("cart-updated", fetchCartCount);
+  }, []);
+
+  // Real-time Notification Count synchronization
   useEffect(() => {
     if (isAuthenticated) {
       const fetchUnreadNotifications = async () => {
@@ -127,44 +151,57 @@ export function MobileHeader({
               <span className="text-on-surface">Farm</span>
             </div>
             <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-neutral/70 mt-0.5 leading-none">
-              Digital Agriculture Platform
+              Connect. Trade. Grow.
             </span>
           </div>
         </Link>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1">
-          {/* Search Trigger */}
+        <div className="flex items-center gap-0.5">
+          {/* EcoFarm AI Assistant Link */}
           <Link
-            href="/marketplace"
-            className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
-            aria-label="Search Marketplace"
+            href="/ai"
+            className="relative flex items-center justify-center min-h-[44px] min-w-[38px] rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
+            aria-label="EcoFarm AI Assistant"
           >
-            <Search className="h-5 w-5" />
+            <Sparkles className="h-5 w-5 text-emerald-600" />
           </Link>
 
           {/* Notifications (Authenticated) */}
           {isAuthenticated && (
             <Link
               href="/notifications"
-              className="relative flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
+              className="relative flex items-center justify-center min-h-[44px] min-w-[40px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
               aria-label={`Notifications (${unreadNotifCount} unread)`}
             >
               <Bell className="h-5 w-5" />
               {unreadNotifCount > 0 && (
-                <span className="absolute top-2 right-2 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-status-error"></span>
+                <span className="absolute top-2 right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-status-error px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white">
+                  {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
                 </span>
               )}
             </Link>
           )}
 
+          {/* Cart Icon with Real Count Badge */}
+          <Link
+            href={userRole?.toUpperCase() === "BUYER" ? "/buyer/cart" : "/cart"}
+            className="relative flex items-center justify-center min-h-[44px] min-w-[40px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors"
+            aria-label={`Shopping Cart (${cartCount} items)`}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <span className="absolute top-2 right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-status-error px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-white">
+                {cartCount > 99 ? "99+" : cartCount}
+              </span>
+            )}
+          </Link>
+
           {/* Mobile Menu Drawer Toggle */}
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            className="flex items-center justify-center min-h-[44px] min-w-[40px] rounded-lg text-slate-neutral hover:text-brand-primary hover:bg-surface-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             aria-label={isOpen ? "Close menu" : "Open menu"}
             aria-expanded={isOpen}
           >
@@ -240,6 +277,15 @@ export function MobileHeader({
             >
               <Wrench className="h-4 w-4 text-brand-primary" />
               <span>Services & Equipment</span>
+            </Link>
+
+            <Link
+              href="/ai"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-3 min-h-[44px] rounded-lg text-sm font-semibold text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors"
+            >
+              <Sparkles className="h-4 w-4 text-emerald-600" />
+              <span>EcoFarm AI Assistant</span>
             </Link>
 
             <Link

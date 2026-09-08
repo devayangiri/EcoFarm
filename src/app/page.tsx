@@ -29,6 +29,7 @@ import { DualSectorShowcase } from "@/components/public/dual-sector-showcase";
 import { ProductCard } from "@/components/cards/product-card";
 import { NetworkCard } from "@/components/network/network-card";
 import { ServiceCard } from "@/components/services/service-card";
+import { MobileHomeView } from "@/components/home/mobile-home-view";
 import { getCurrentUser } from "@/lib/rbac";
 
 import { MarketplaceService } from "@/services/marketplace.service";
@@ -223,8 +224,21 @@ export default async function HomePage() {
       userRole={session?.role || "Guest"}
       userName={session?.fullName || "Welcome"}
     >
-      {/* SECTION 1: HERO */}
-      <LandingHero />
+      {/* MOBILE-NATIVE COMMERCE HOME (< md) */}
+      <div className="block md:hidden">
+        <MobileHomeView
+          featuredProducts={featuredProducts}
+          genuineServices={genuineServices}
+          genuineProfiles={genuineProfiles}
+          userRole={session?.role}
+          userName={session?.fullName}
+        />
+      </div>
+
+      {/* DESKTOP B2B PORTAL (>= md) — 100% UNCHANGED */}
+      <div className="hidden md:block">
+        {/* SECTION 1: HERO */}
+        <LandingHero />
 
       {/* SECTION 2: WORKING GLOBAL SEARCH */}
       <GlobalMarketplaceSearch />
@@ -647,6 +661,7 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      </div>
     </AppShell>
   );
 }

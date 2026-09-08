@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   ArrowRight,
   ShoppingCart,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -209,10 +210,11 @@ export function Header({
     }
   };
 
-  const navLinks = [
+  const navLinks: { label: string; href: string; icon?: React.ComponentType<{ className?: string }> }[] = [
     { label: "Marketplace", href: "/marketplace" },
     { label: "Business Network", href: "/network" },
     { label: "Services", href: "/services" },
+    { label: "EcoFarm AI", href: "/ai", icon: Sparkles },
     { label: "How It Works", href: "/#how-it-works" },
   ];
 
@@ -252,16 +254,20 @@ export function Header({
               link.href === "/#how-it-works"
                 ? false
                 : activePath === link.href || activePath.startsWith(`${link.href}/`);
+            const Icon = link.icon;
             return (
               <Link
                 key={link.label}
                 href={link.href}
-                className={`relative px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-semibold transition-all rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary whitespace-nowrap ${
+                className={`relative inline-flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-semibold transition-all rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary whitespace-nowrap ${
                   isActive
                     ? "text-brand-primary bg-surface-low font-bold"
+                    : link.icon
+                    ? "text-emerald-700 bg-emerald-50/70 hover:text-emerald-800 hover:bg-emerald-100/70 border border-emerald-200/50"
                     : "text-slate-neutral hover:text-brand-primary hover:bg-surface-low/60"
                 }`}
               >
+                {Icon && <Icon className="h-3.5 w-3.5 text-emerald-600" />}
                 {link.label}
                 {isActive && (
                   <span className="absolute bottom-0 left-2.5 right-2.5 h-0.5 bg-brand-primary rounded-full" />

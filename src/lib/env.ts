@@ -13,6 +13,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  ECOFARM_AI_WEBHOOK_URL: z.string().optional().default("http://localhost:5678/webhook/c94f1e8a-fb4a-48b6-8d3f-7c592fb9937f"),
 });
 
 export const env = envSchema.parse({
@@ -28,4 +29,5 @@ export const env = envSchema.parse({
   NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+  ECOFARM_AI_WEBHOOK_URL: process.env.ECOFARM_AI_WEBHOOK_URL,
 });

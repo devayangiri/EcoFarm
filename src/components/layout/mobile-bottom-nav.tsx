@@ -35,60 +35,61 @@ export function getRoleNavTabs(userRole: string = "GUEST"): MobileNavTab[] {
   switch (normalizedRole) {
     case "FARMER":
       return [
-        { label: "Portal", href: "/farmer", icon: LayoutDashboard },
+        { label: "Home", href: "/farmer", icon: Home },
         { label: "Products", href: "/farmer/products", icon: Package },
-        { label: "Farms", href: "/farmer/farms", icon: Sprout },
         { label: "Orders", href: "/farmer/orders", icon: ShoppingCart },
         { label: "Messages", href: "/messages", icon: MessageSquare },
+        { label: "Account", href: "/farmer/profile", icon: User },
       ];
 
     case "BUYER":
       return [
-        { label: "Market", href: "/marketplace", icon: Store },
-        { label: "Saved", href: "/buyer/saved", icon: Bookmark },
-        { label: "Cart", href: "/buyer/cart", icon: ShoppingBag },
+        { label: "Home", href: "/buyer", icon: Home },
+        { label: "Shop", href: "/marketplace", icon: Store },
         { label: "Orders", href: "/buyer/orders", icon: Package },
         { label: "Messages", href: "/messages", icon: MessageSquare },
+        { label: "Account", href: "/buyer/profile", icon: User },
       ];
 
     case "AGENT":
       return [
-        { label: "Dashboard", href: "/agent", icon: LayoutDashboard },
+        { label: "Home", href: "/agent", icon: Home },
         { label: "Leads", href: "/agent/leads", icon: UserPlus },
         { label: "Tasks", href: "/agent/tasks", icon: CheckSquare },
-        { label: "Verify", href: "/agent/verification", icon: ShieldCheck },
         { label: "Messages", href: "/messages", icon: MessageSquare },
+        { label: "Account", href: "/settings", icon: User },
       ];
 
     case "SERVICE_PROVIDER":
     case "PROVIDER":
       return [
-        { label: "Portal", href: "/provider", icon: LayoutDashboard },
+        { label: "Home", href: "/provider", icon: Home },
         { label: "Services", href: "/provider/services", icon: Wrench },
-        { label: "Requests", href: "/provider/requests", icon: FileText },
-        { label: "Network", href: "/network", icon: Users },
+        { label: "Orders", href: "/provider/requests", icon: FileText },
         { label: "Messages", href: "/messages", icon: MessageSquare },
+        { label: "Account", href: "/settings", icon: User },
       ];
 
     case "ADMIN":
       return [
-        { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-        { label: "Users", href: "/admin/users", icon: Users },
-        { label: "Catalog", href: "/admin/products", icon: Package },
+        { label: "Home", href: "/admin", icon: Home },
+        { label: "Products", href: "/admin/products", icon: Package },
         { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
-        { label: "Audit", href: "/admin/audit", icon: FileText },
+        { label: "Users", href: "/admin/users", icon: Users },
+        { label: "Account", href: "/settings", icon: User },
       ];
 
     default:
       return [
         { label: "Home", href: "/", icon: Home },
-        { label: "Market", href: "/marketplace", icon: Store },
-        { label: "Network", href: "/network", icon: Users },
+        { label: "Shop", href: "/marketplace", icon: Store },
         { label: "Services", href: "/services", icon: Wrench },
+        { label: "Network", href: "/network", icon: Users },
         { label: "Sign In", href: "/login", icon: User },
       ];
   }
 }
+
 
 export interface MobileBottomNavProps {
   currentPath?: string;
