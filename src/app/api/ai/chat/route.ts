@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json, text/plain, */*",
+          "User-Agent": "EcoFarm-Server/1.0 (Mozilla/5.0; https://app.ayangiri.com)",
         },
         body: JSON.stringify(n8nPayload),
         signal: controller.signal,
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
             success: false,
             error: "AI service temporarily unavailable",
             message: "EcoFarm AI is temporarily unavailable. Please try again.",
+            details: `n8n responded with HTTP ${n8nRes.status}: ${errBody.slice(0, 300)}`,
           },
           { status: 502 }
         );
@@ -104,6 +106,7 @@ export async function POST(req: NextRequest) {
             success: false,
             error: "AI service temporarily unavailable",
             message: "EcoFarm AI is temporarily unavailable. Please try again.",
+            details: "n8n returned empty or unparseable response payload",
           },
           { status: 502 }
         );
@@ -132,6 +135,7 @@ export async function POST(req: NextRequest) {
           message: isTimeout
             ? "EcoFarm AI request timed out. Please try again."
             : "EcoFarm AI is temporarily unavailable. Please try again.",
+          details: fetchErr?.message || String(fetchErr),
         },
         { status: 504 }
       );
@@ -143,6 +147,7 @@ export async function POST(req: NextRequest) {
         success: false,
         error: "AI service temporarily unavailable",
         message: "EcoFarm AI is temporarily unavailable. Please try again.",
+        details: err?.message || String(err),
       },
       { status: 500 }
     );
