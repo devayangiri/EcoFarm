@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeoutId);
 
       if (!n8nRes.ok) {
-        console.error(`[EcoFarm AI] n8n returned error status ${n8nRes.status}: ${n8nRes.statusText}`);
+        const errBody = await n8nRes.text().catch(() => "");
+        console.error(`[EcoFarm AI] n8n returned error status ${n8nRes.status}: ${n8nRes.statusText}`, errBody);
         return NextResponse.json(
           {
             success: false,

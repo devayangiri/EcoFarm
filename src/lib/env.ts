@@ -6,6 +6,16 @@ function sanitizeEnv(val: string | undefined): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function sanitizeAiWebhookUrl(val: string | undefined): string {
+  const prodDefault = "https://ayan1.app.n8n.cloud/webhook/ecofarm-ai";
+  if (!val || typeof val !== "string") return prodDefault;
+  const trimmed = val.trim();
+  if (!trimmed || trimmed.includes("localhost") || trimmed.includes("127.0.0.1")) {
+    return prodDefault;
+  }
+  return trimmed;
+}
+
 const DEFAULT_AUTH_SECRET = "agri-aqua-network-phase-1-dev-secret-key-change-in-prod";
 
 const envSchema = z.object({
@@ -65,5 +75,5 @@ export const env = envSchema.parse({
   NEXT_PUBLIC_RAZORPAY_KEY_ID: sanitizeEnv(process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) || sanitizeEnv(process.env.RAZORPAY_KEY_ID),
   RAZORPAY_KEY_SECRET: sanitizeEnv(process.env.RAZORPAY_KEY_SECRET),
   RAZORPAY_WEBHOOK_SECRET: sanitizeEnv(process.env.RAZORPAY_WEBHOOK_SECRET),
-  ECOFARM_AI_WEBHOOK_URL: sanitizeEnv(process.env.ECOFARM_AI_WEBHOOK_URL) || undefined,
+  ECOFARM_AI_WEBHOOK_URL: sanitizeAiWebhookUrl(process.env.ECOFARM_AI_WEBHOOK_URL),
 });
