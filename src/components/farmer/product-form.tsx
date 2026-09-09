@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sprout,
@@ -12,6 +12,11 @@ import {
   X,
   IndianRupee,
   Package,
+  ImagePlus,
+  Camera,
+  Star,
+  Loader2,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,42 +66,179 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
     harvestDate: initialData?.harvestDate ? initialData.harvestDate.slice(0, 10) : "",
     locationDistrict: initialData?.locationDistrict || "Purba Bardhaman",
     locationState: initialData?.locationState || "West Bengal",
-    images: initialData?.images || [
-      {
-        url: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600",
-        altText: "Produce Image",
-        isPrimary: true,
-      },
-    ],
+    images: initialData?.images || [],
   });
 
   const [imageUrlInput, setImageUrlInput] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAddImage = () => {
-    if (!imageUrlInput.trim()) return;
+  const compressImageFile = (
+    file: File,
+    maxWidth = 1200,
+    maxHeight = 1200,
+    quality = 0.82
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) {
+        reject(new Error("Selected file is not an image."));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Failed to load image for compression"));
+        img.onload = () => {
+          try {
+            let { width, height } = img;
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(reader.result as string);
+              return;
+            }
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+            resolve(compressedDataUrl);
+          } catch {
+            resolve(reader.result as string);
+          }
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const processSelectedFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    setUploadError(null);
+    const remainingSlots = 8 - formData.images.length;
+    if (remainingSlots <= 0) {
+      setUploadError("Maximum 8 photos allowed. Please remove an existing photo first.");
+      return;
+    }
+
+    const filesToProcess = fileArray.slice(0, remainingSlots);
+    if (fileArray.length > remainingSlots) {
+      setUploadError(`Added ${remainingSlots} photo(s). Maximum 8 photos allowed.`);
+    }
+
+    setIsProcessingPhotos(true);
+    try {
+      const processedImages: Array<{ url: string; altText: string; isPrimary: boolean }> = [];
+      for (const file of filesToProcess) {
+        if (!file.type.startsWith("image/")) continue;
+        const compressedUrl = await compressImageFile(file);
+        processedImages.push({
+          url: compressedUrl,
+          altText: file.name ? file.name.replace(/\.[^/.]+$/, "") : (formData.title || "Product photo"),
+          isPrimary: false,
+        });
+      }
+
+      if (processedImages.length > 0) {
+        setFormData((prev) => {
+          const hasPrimary = prev.images.some((img) => img.isPrimary);
+          const updated = [...prev.images, ...processedImages];
+          if (!hasPrimary && updated.length > 0) {
+            updated[0] = { ...updated[0], isPrimary: true };
+          }
+          return { ...prev, images: updated };
+        });
+      }
+    } catch (err: any) {
+      setUploadError(err?.message || "Failed to process photos from gallery");
+    } finally {
+      setIsProcessingPhotos(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      processSelectedFiles(e.target.files);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files) {
+      processSelectedFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleSetPrimary = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      images: [
-        ...prev.images,
-        {
-          url: imageUrlInput.trim(),
-          altText: formData.title || "Product photo",
-          isPrimary: prev.images.length === 0,
-        },
-      ],
+      images: prev.images.map((img, idx) => ({
+        ...img,
+        isPrimary: idx === index,
+      })),
     }));
+  };
+
+  const handleAddImage = () => {
+    if (!imageUrlInput.trim()) return;
+    setUploadError(null);
+    if (formData.images.length >= 8) {
+      setUploadError("Maximum 8 photos allowed. Please remove an existing photo first.");
+      return;
+    }
+    setFormData((prev) => {
+      const hasPrimary = prev.images.some((img) => img.isPrimary);
+      return {
+        ...prev,
+        images: [
+          ...prev.images,
+          {
+            url: imageUrlInput.trim(),
+            altText: formData.title || "Product photo",
+            isPrimary: !hasPrimary,
+          },
+        ],
+      };
+    });
     setImageUrlInput("");
   };
 
   const handleRemoveImage = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, idx) => idx !== index),
-    }));
+    setFormData((prev) => {
+      const filtered = prev.images.filter((_, idx) => idx !== index);
+      if (prev.images[index]?.isPrimary && filtered.length > 0) {
+        filtered[0] = { ...filtered[0], isPrimary: true };
+      }
+      return {
+        ...prev,
+        images: filtered,
+      };
+    });
   };
 
   const validateStep1 = () => {
@@ -442,51 +584,213 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="space-y-3">
-              <label className="text-xs font-heading font-semibold text-on-surface">
-                Commodity Photos (Max 8 images)
-              </label>
-
-              <div className="flex gap-2">
-                <Input
-                  value={imageUrlInput}
-                  onChange={(e) => setImageUrlInput(e.target.value)}
-                  placeholder="Paste direct image URL (https://...)"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleAddImage}
-                  leftIcon={<UploadCloud className="h-4 w-4" />}
-                >
-                  Add
-                </Button>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-heading font-semibold text-on-surface block">
+                    Commodity Photos (Upload from Gallery / Camera)
+                  </label>
+                  <p className="text-[11px] text-on-surface/60">
+                    Add clear photos of your harvest. The primary photo is displayed on the marketplace card.
+                  </p>
+                </div>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-surface-low text-on-surface border border-surface-dim">
+                  {formData.images.length} / 8 photos
+                </span>
               </div>
 
-              {formData.images.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  {formData.images.map((img, idx) => (
-                    <div key={idx} className="relative group rounded border border-surface-dim overflow-hidden aspect-video bg-surface-low">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img.url} alt={img.altText || "Produce"} className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100 transition-opacity"
-                        aria-label="Remove image"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                      {img.isPrimary && (
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-brand-primary text-white text-[9px] font-bold rounded">
-                          Primary
-                        </span>
-                      )}
+              {uploadError && (
+                <Alert variant="error" title="Photo Upload Issue" onDismiss={() => setUploadError(null)}>
+                  {uploadError}
+                </Alert>
+              )}
+
+              {/* Hidden file input supporting multi-image selection from gallery / camera */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/jpg"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {/* Main Gallery Dropzone / Picker */}
+              {formData.images.length < 8 && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => !isProcessingPhotos && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
+                    isDragging
+                      ? "border-brand-primary bg-brand-primary/5"
+                      : "border-surface-dim hover:border-brand-primary/60 hover:bg-surface-lowest"
+                  } ${isProcessingPhotos ? "opacity-75 cursor-wait" : ""}`}
+                >
+                  {isProcessingPhotos ? (
+                    <div className="flex flex-col items-center justify-center gap-2 py-2">
+                      <Loader2 className="h-8 w-8 text-brand-primary animate-spin" />
+                      <p className="text-xs font-medium text-brand-primary">
+                        Optimizing and processing photos from your gallery...
+                      </p>
+                      <p className="text-[11px] text-on-surface/60">
+                        Compressing high-resolution images for fast mobile loading.
+                      </p>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="flex items-center gap-2 text-brand-primary bg-brand-primary/10 p-3 rounded-full">
+                        <Camera className="h-6 w-6" />
+                        <ImagePlus className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-on-surface">
+                          Tap to select photos from your device gallery or camera
+                        </p>
+                        <p className="text-xs text-on-surface/60 max-w-sm mx-auto">
+                          Choose up to 8 photos (JPEG, PNG, WEBP). Photos are automatically compressed for high-speed upload.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="mt-2 pointer-events-none"
+                        leftIcon={<ImagePlus className="h-4 w-4" />}
+                      >
+                        Browse Device Gallery
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Uploaded Photos Grid */}
+              {formData.images.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-on-surface">
+                      Selected Photos ({formData.images.length})
+                    </span>
+                    <span className="text-[11px] text-on-surface/60">
+                      Click &quot;Set Cover&quot; on any photo to make it the primary display image
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {formData.images.map((img, idx) => (
+                      <div
+                        key={idx}
+                        className={`relative group rounded-lg border overflow-hidden aspect-square bg-surface-low transition-shadow hover:shadow-sm ${
+                          img.isPrimary ? "border-brand-primary ring-2 ring-brand-primary/20" : "border-surface-dim"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.url}
+                          alt={img.altText || `Product photo ${idx + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+
+                        {/* Top-Right Remove Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(idx);
+                          }}
+                          className="absolute top-1.5 right-1.5 p-1 bg-red-600/90 hover:bg-red-700 text-white rounded-full shadow-sm transition-all z-10"
+                          aria-label={`Remove photo ${idx + 1}`}
+                          title="Remove photo"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+
+                        {/* Primary Badge or Set Primary Action */}
+                        <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between pointer-events-auto">
+                          {img.isPrimary ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-primary text-white text-[10px] font-bold rounded shadow-sm">
+                              <Star className="h-2.5 w-2.5 fill-current" />
+                              Cover Photo
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetPrimary(idx);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-black/70 hover:bg-black/90 text-white text-[10px] font-medium rounded backdrop-blur-sm transition-colors"
+                              title="Set as marketplace cover photo"
+                            >
+                              <Star className="h-2.5 w-2.5" />
+                              Set Cover
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Quick Add More Card if under 8 photos */}
+                    {formData.images.length < 8 && !isProcessingPhotos && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-lg border-2 border-dashed border-surface-dim hover:border-brand-primary/70 hover:bg-surface-lowest text-on-surface/70 hover:text-brand-primary transition-all text-xs font-medium"
+                      >
+                        <ImagePlus className="h-5 w-5" />
+                        <span>+ Add More</span>
+                        <span className="text-[10px] text-on-surface/50">
+                          ({8 - formData.images.length} left)
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Collapsible Direct URL Input Fallback */}
+              <div className="pt-2 border-t border-surface-dim/60">
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="text-xs text-brand-primary hover:underline inline-flex items-center gap-1 font-medium"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  {showUrlInput ? "Hide web URL input" : "Have an online image link? Add via URL instead"}
+                </button>
+
+                {showUrlInput && (
+                  <div className="mt-2.5 flex gap-2">
+                    <Input
+                      value={imageUrlInput}
+                      onChange={(e) => setImageUrlInput(e.target.value)}
+                      placeholder="Paste direct image web URL (https://...)"
+                      className="text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddImage();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleAddImage}
+                      leftIcon={<UploadCloud className="h-4 w-4" />}
+                      disabled={!imageUrlInput.trim()}
+                    >
+                      Add URL
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-surface-dim pt-4">

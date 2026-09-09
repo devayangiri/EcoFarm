@@ -11,7 +11,21 @@ export const ProductStatusEnum = z.enum([
 ]);
 
 export const ProductImageInputSchema = z.object({
-  url: z.string().url("Valid image URL required"),
+  url: z.string().refine(
+    (val) => {
+      if (typeof val !== "string") return false;
+      const trimmed = val.trim();
+      if (trimmed.startsWith("data:image/")) return true;
+      if (trimmed.startsWith("/") || trimmed.startsWith("blob:")) return true;
+      try {
+        const u = new URL(trimmed);
+        return u.protocol === "http:" || u.protocol === "https:";
+      } catch {
+        return false;
+      }
+    },
+    { message: "Valid image URL or photo data required" }
+  ),
   altText: z.string().max(100).optional(),
   isPrimary: z.boolean().default(false),
   sortOrder: z.number().int().nonnegative().default(0),
