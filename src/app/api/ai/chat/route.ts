@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const userId = session?.userId ?? null;
     const userRole = session?.role ?? null;
 
-    const webhookUrl = env.ECOFARM_AI_WEBHOOK_URL || "http://localhost:5678/webhook/c94f1e8a-fb4a-48b6-8d3f-7c592fb9937f";
+    const webhookUrl = env.ECOFARM_AI_WEBHOOK_URL || "https://ayan1.app.n8n.cloud/webhook/ecofarm-ai";
 
     // Request Payload matching exact n8n AI workflow specification
     const n8nPayload = {
@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             success: false,
+            error: "AI service temporarily unavailable",
             message: "EcoFarm AI is temporarily unavailable. Please try again.",
           },
           { status: 502 }
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             success: false,
+            error: "AI service temporarily unavailable",
             message: "EcoFarm AI is temporarily unavailable. Please try again.",
           },
           { status: 502 }
@@ -107,6 +109,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: responseText,
+        data: {
+          answer: responseText,
+        },
         sessionId,
       });
     } catch (fetchErr: any) {
@@ -120,6 +125,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
+          error: isTimeout ? "AI request timed out" : "AI service temporarily unavailable",
           message: isTimeout
             ? "EcoFarm AI request timed out. Please try again."
             : "EcoFarm AI is temporarily unavailable. Please try again.",
@@ -132,6 +138,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
+        error: "AI service temporarily unavailable",
         message: "EcoFarm AI is temporarily unavailable. Please try again.",
       },
       { status: 500 }

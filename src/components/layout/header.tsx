@@ -220,12 +220,11 @@ export function Header({
     { label: "Marketplace", href: "/marketplace" },
     { label: "Business Network", shortLabel: "Network", href: "/network" },
     { label: "Services", href: "/services" },
-    { label: "EcoFarm AI", href: "/ai", icon: Sparkles },
-    { label: "How It Works", href: "/#how-it-works", hideWhenAuth: true },
+    { label: "How It Works", href: "/#how-it-works" },
   ];
 
   return (
-    <header className="hidden md:block sticky top-0 z-40 w-full border-b border-surface-dim/80 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(13,28,47,0.04)] overflow-x-clip">
+    <header className="hidden md:block sticky top-0 z-40 w-full border-b border-surface-dim/80 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(13,28,47,0.04)]">
       <div className="mx-auto flex h-16 sm:h-18 xl:h-20 w-full max-w-[1600px] items-center justify-between gap-2 lg:gap-3 xl:gap-5 px-3 sm:px-4 lg:px-6 xl:px-8">
         {/* 1. Left: Brand Logo & Tagline */}
         <Link
@@ -421,6 +420,15 @@ export function Header({
                     >
                       <LayoutDashboard className="h-4 w-4 text-brand-primary" />
                       <span>Role Portal</span>
+                    </Link>
+
+                    <Link
+                      href="/ai"
+                      prefetch={false}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface hover:bg-surface-low hover:text-brand-primary font-medium transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4 text-emerald-600" />
+                      <span>EcoFarm AI Assistant</span>
                     </Link>
 
                     <Link

@@ -7,6 +7,7 @@ import { Sidebar } from "./sidebar";
 import { MobileHeader } from "./mobile-header";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { Footer } from "./footer";
+import { FloatingAIButton } from "@/components/ai/floating-ai-button";
 
 export const ShellContext = createContext<boolean>(false);
 
@@ -82,6 +83,9 @@ export function AppShell({
 
         {/* Mobile Bottom Navigation (Smart Role-Aware) */}
         <MobileBottomNav currentPath={effectivePath} userRole={userRole} />
+
+        {/* Global Floating AI Trigger */}
+        <FloatingAIButton />
       </div>
     </ShellContext.Provider>
   );

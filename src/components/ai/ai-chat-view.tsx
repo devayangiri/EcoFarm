@@ -47,7 +47,7 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
   const [voiceNotice, setVoiceNotice] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Initialize or restore session ID on mount
   useEffect(() => {
@@ -64,29 +64,30 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
     scrollToBottom();
   }, [messages, isLoading, error, scrollToBottom]);
 
-  // Quick Action Prompts tailored by role
+  // Quick Action Prompts tailored by role, including all key core prompts
   const getRoleQuickPrompts = (): string[] => {
     const role = (userRole || "").toUpperCase();
     if (role === "FARMER") {
       return [
-        "What are the main causes of yellow leaves in paddy?",
-        "How can I improve rice yield in clay soil?",
-        "How should I prepare for high seasonal demand?",
-        "Fish pond water quality and dissolved oxygen advice",
+        "What are common causes of yellow leaves in paddy?",
+        "How can I improve fish pond water quality?",
+        "How can demand forecasting help farmers?",
+        "How can I find bulk buyers?",
       ];
     }
     if (role === "BUYER") {
       return [
-        "Find products for bulk procurement on EcoFarm",
-        "How does MOQ work in wholesale trade?",
-        "How can I plan commodity procurement across seasons?",
-        "What agricultural commodities are in high demand?",
+        "How can I find bulk buyers?",
+        "How does MOQ work?",
+        "How can demand forecasting help farmers?",
+        "What can route optimization improve?",
       ];
     }
-    if (role === "SERVICE_PROVIDER") {
+    if (role === "SERVICE_PROVIDER" || role === "PROVIDER") {
       return [
-        "How to price tractor and harvester rentals regionally?",
-        "Logistics route planning best practices for perishable harvests",
+        "What can route optimization improve?",
+        "How can demand forecasting help farmers?",
+        "How to price tractor and equipment rentals regionally?",
         "Cold storage temperature standards for freshwater fish",
       ];
     }
@@ -94,14 +95,17 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
       return [
         "Marketplace supply and demand cluster insights",
         "Verification guidelines for new agricultural producers",
-        "Commodity catalog standards for agriculture and aquaculture",
+        "How can demand forecasting help farmers?",
+        "What can route optimization improve?",
       ];
     }
     return [
-      "What are the main causes of yellow leaves in paddy?",
-      "How can I improve fish growth in a pond?",
-      "What is MOQ in B2B agriculture?",
-      "How can a farmer prepare for high demand?",
+      "What are common causes of yellow leaves in paddy?",
+      "How can I improve fish pond water quality?",
+      "How can I find bulk buyers?",
+      "How does MOQ work?",
+      "How can demand forecasting help farmers?",
+      "What can route optimization improve?",
     ];
   };
 
@@ -138,23 +142,28 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        throw new Error(data?.message || "EcoFarm AI is temporarily unavailable. Please try again.");
+        throw new Error(data?.message || data?.error || "AI Assistant is temporarily unavailable. Please try again.");
+      }
+
+      const answerContent = data?.data?.answer || data?.message || "";
+      if (!answerContent) {
+        throw new Error("AI Assistant is temporarily unavailable. Please try again.");
       }
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: data.message,
+        content: answerContent,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
       console.error("[AIChatView] Error sending message:", err);
-      setError(err?.message || "EcoFarm AI is temporarily unavailable. Please try again.");
+      setError("AI Assistant is temporarily unavailable. Please try again.");
     } finally {
       setIsLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => textareaRef.current?.focus(), 100);
     }
   };
 
@@ -170,7 +179,7 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
     setError(null);
     setInput("");
     setSessionId(crypto.randomUUID());
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
   const handleCopyText = (id: string, text: string) => {
@@ -230,10 +239,11 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
               type="button"
               onClick={handleNewChat}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-neutral hover:text-brand-primary hover:bg-surface-low border border-surface-dim transition-all"
-              title="Start a new chat conversation"
+              title="Clear conversation and start fresh"
+              aria-label="Clear conversation"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New Chat</span>
+              <span>Clear conversation</span>
             </button>
           )}
 
@@ -430,29 +440,35 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="max-w-3xl mx-auto flex items-center gap-2"
+          className="max-w-3xl mx-auto flex items-end gap-2"
         >
           {/* Voice Input Placeholder */}
           <button
             type="button"
             onClick={handleVoicePlaceholder}
-            className="flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl text-slate-neutral hover:text-brand-primary hover:bg-surface-low border border-surface-dim/80 shrink-0 transition-colors"
+            className="flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl text-slate-neutral hover:text-brand-primary hover:bg-surface-low border border-surface-dim/80 shrink-0 transition-colors mb-0.5"
             aria-label="Voice input (coming soon)"
             title="Voice input (coming soon)"
           >
             <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
-          {/* Text Input */}
+          {/* Text Area with Enter to Send / Shift+Enter for Newline */}
           <div className="relative flex-1">
-            <input
-              ref={inputRef}
-              type="text"
+            <textarea
+              ref={textareaRef}
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask EcoFarm AI about crops, fish, procurement, logistics..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              placeholder="Ask EcoFarm AI about crops, fish, procurement, logistics... (Press Enter to send, Shift+Enter for newline)"
               disabled={isLoading}
-              className="w-full h-10 sm:h-11 pl-3.5 pr-3 rounded-xl border border-surface-dim bg-surface-low/60 text-xs sm:text-sm text-on-surface placeholder:text-slate-neutral/60 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all disabled:opacity-50"
+              className="w-full resize-none py-2.5 pl-3.5 pr-3 rounded-xl border border-surface-dim bg-surface-low/60 text-xs sm:text-sm text-on-surface placeholder:text-slate-neutral/60 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:bg-white transition-all disabled:opacity-50 min-h-[42px] max-h-32"
             />
           </div>
 
@@ -460,7 +476,7 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover disabled:opacity-40 disabled:cursor-not-allowed shrink-0 active:scale-95 transition-all"
+            className="flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover disabled:opacity-40 disabled:cursor-not-allowed shrink-0 active:scale-95 transition-all mb-0.5"
             aria-label="Send question to EcoFarm AI"
           >
             <Send className="h-4 w-4" />

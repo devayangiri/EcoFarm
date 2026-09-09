@@ -158,14 +158,6 @@ export function MobileHeader({
 
         {/* Action Controls */}
         <div className="flex items-center gap-0.5">
-          {/* EcoFarm AI Assistant Link */}
-          <Link
-            href="/ai"
-            className="relative flex items-center justify-center min-h-[44px] min-w-[38px] rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
-            aria-label="EcoFarm AI Assistant"
-          >
-            <Sparkles className="h-5 w-5 text-emerald-600" />
-          </Link>
 
           {/* Notifications (Authenticated) */}
           {isAuthenticated && (

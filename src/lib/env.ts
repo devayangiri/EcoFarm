@@ -39,7 +39,7 @@ const envSchema = z.object({
   ECOFARM_AI_WEBHOOK_URL: z
     .string()
     .optional()
-    .default("http://localhost:5678/webhook/c94f1e8a-fb4a-48b6-8d3f-7c592fb9937f"),
+    .default("https://ayan1.app.n8n.cloud/webhook/ecofarm-ai"),
 });
 
 const rawAuthSecret =
