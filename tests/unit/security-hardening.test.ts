@@ -84,4 +84,14 @@ describe("Phase 15 — Security Hardening & Trust Boundaries", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("4. Environment Resiliency & Build-Time Secrets", () => {
+    it("safely provides non-empty fallback secrets for AUTH_SECRET and NEXTAUTH_SECRET", async () => {
+      const { env } = await import("@/lib/env");
+      expect(typeof env.AUTH_SECRET).toBe("string");
+      expect(env.AUTH_SECRET.length).toBeGreaterThan(0);
+      expect(typeof env.NEXTAUTH_SECRET).toBe("string");
+      expect(env.NEXTAUTH_SECRET.length).toBeGreaterThan(0);
+    });
+  });
 });
