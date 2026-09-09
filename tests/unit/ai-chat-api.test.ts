@@ -136,10 +136,11 @@ describe("EcoFarm AI Assistant - /api/ai/chat", () => {
 
       // Verify the n8n payload format requested by specification:
       expect(capturedPayload).toEqual({
+        chatInput: "What are the main causes of yellow leaves in paddy?",
+        message: "What are the main causes of yellow leaves in paddy?",
         sessionId: "sess-abc",
         userId: "farmer-user-100",
         userRole: "FARMER",
-        message: "What are the main causes of yellow leaves in paddy?",
         context: {
           source: "ecofarm",
         },
@@ -148,7 +149,7 @@ describe("EcoFarm AI Assistant - /api/ai/chat", () => {
       expect(capturedPayload.message).toBe("What are the main causes of yellow leaves in paddy?");
     });
 
-    it("should pass null userId and null userRole for guest users", async () => {
+    it("should pass fallback guest userId and userRole for unauthenticated users", async () => {
       vi.mocked(rbac.getCurrentUser).mockResolvedValue(null);
 
       let capturedPayload: any = null;
@@ -173,8 +174,9 @@ describe("EcoFarm AI Assistant - /api/ai/chat", () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.message).toBe("Maintain optimal dissolved oxygen levels.");
-      expect(capturedPayload.userId).toBeNull();
-      expect(capturedPayload.userRole).toBeNull();
+      expect(capturedPayload.userId).toBe("guest");
+      expect(capturedPayload.userRole).toBe("GUEST");
+      expect(capturedPayload.chatInput).toBe("How can I improve fish growth in a pond?");
       expect(capturedPayload.message).toBe("How can I improve fish growth in a pond?");
     });
 

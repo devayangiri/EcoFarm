@@ -109,21 +109,22 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
     ];
   };
 
-  const handleSendMessage = async (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string, isRetry = false) => {
     const question = (textToSend !== undefined ? textToSend : input).trim();
     if (!question || isLoading) return;
 
     setError(null);
     setInput("");
 
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: question,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    if (!isRetry) {
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: question,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+    }
     setIsLoading(true);
 
     try {
@@ -160,7 +161,7 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
       console.error("[AIChatView] Error sending message:", err);
-      setError("AI Assistant is temporarily unavailable. Please try again.");
+      setError(err?.message || "AI Assistant is temporarily unavailable. Please try again.");
     } finally {
       setIsLoading(false);
       setTimeout(() => textareaRef.current?.focus(), 100);
@@ -170,7 +171,7 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
   const handleRetry = () => {
     const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMessage) {
-      handleSendMessage(lastUserMessage.content);
+      handleSendMessage(lastUserMessage.content, true);
     }
   };
 

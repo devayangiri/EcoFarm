@@ -25,17 +25,19 @@ export async function POST(req: NextRequest) {
     // Authoritative Server-Side User Session Extraction (RBAC)
     // Never trust client-submitted userId or role
     const session = await getCurrentUser();
-    const userId = session?.userId ?? null;
-    const userRole = session?.role ?? null;
+    const userId = session?.userId || "guest";
+    const userRole = session?.role || "GUEST";
 
     const webhookUrl = env.ECOFARM_AI_WEBHOOK_URL || "https://ayan1.app.n8n.cloud/webhook/ecofarm-ai";
 
     // Request Payload matching exact n8n AI workflow specification
+    // Provides both chatInput (expected by n8n AI Agent node) and message
     const n8nPayload = {
+      chatInput: message,
+      message,
       sessionId,
       userId,
       userRole,
-      message,
       context: {
         source: "ecofarm",
       },
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 40000); // 40s timeout for LLM reasoning
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for LLM reasoning
 
     try {
       const n8nRes = await fetch(webhookUrl, {
