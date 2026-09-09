@@ -69,16 +69,16 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
     const role = (userRole || "").toUpperCase();
     if (role === "FARMER") {
       return [
-        "What are common causes of yellow leaves in paddy?",
-        "How can I improve fish pond water quality?",
+        "What are the main causes of yellow leaves in paddy?",
+        "Fish pond water quality and dissolved oxygen advice",
         "How can demand forecasting help farmers?",
         "How can I find bulk buyers?",
       ];
     }
     if (role === "BUYER") {
       return [
-        "How can I find bulk buyers?",
-        "How does MOQ work?",
+        "Find products for bulk procurement on EcoFarm",
+        "How does MOQ work in wholesale trade?",
         "How can demand forecasting help farmers?",
         "What can route optimization improve?",
       ];
@@ -100,10 +100,10 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
       ];
     }
     return [
-      "What are common causes of yellow leaves in paddy?",
-      "How can I improve fish pond water quality?",
-      "How can I find bulk buyers?",
-      "How does MOQ work?",
+      "What are the main causes of yellow leaves in paddy?",
+      "Fish pond water quality and dissolved oxygen advice",
+      "Find products for bulk procurement on EcoFarm",
+      "How does MOQ work in wholesale trade?",
       "How can demand forecasting help farmers?",
       "What can route optimization improve?",
     ];
@@ -240,11 +240,11 @@ export function AIChatView({ userRole, userName }: AIChatViewProps) {
               type="button"
               onClick={handleNewChat}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-neutral hover:text-brand-primary hover:bg-surface-low border border-surface-dim transition-all"
-              title="Clear conversation and start fresh"
-              aria-label="Clear conversation"
+              title="Start a new chat session"
+              aria-label="New Chat"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span>Clear conversation</span>
+              <span>New Chat</span>
             </button>
           )}
 
