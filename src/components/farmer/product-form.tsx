@@ -607,29 +607,30 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
 
               {/* Hidden file input supporting multi-image selection from gallery / camera */}
               <input
+                id="commodity-photo-upload"
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/jpg"
+                accept="image/*"
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
               />
 
-              {/* Main Gallery Dropzone / Picker */}
+              {/* Main Gallery Dropzone / Picker with native label association */}
               {formData.images.length < 8 && (
-                <div
+                <label
+                  htmlFor={isProcessingPhotos ? undefined : "commodity-photo-upload"}
                   onDragOver={(e) => {
                     e.preventDefault();
                     setIsDragging(true);
                   }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
-                  onClick={() => !isProcessingPhotos && fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
+                  className={`block border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 select-none ${
                     isDragging
                       ? "border-brand-primary bg-brand-primary/5"
                       : "border-surface-dim hover:border-brand-primary/60 hover:bg-surface-lowest"
-                  } ${isProcessingPhotos ? "opacity-75 cursor-wait" : ""}`}
+                  } ${isProcessingPhotos ? "opacity-75 cursor-wait pointer-events-none" : ""}`}
                 >
                   {isProcessingPhotos ? (
                     <div className="flex flex-col items-center justify-center gap-2 py-2">
@@ -652,21 +653,16 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
                           Tap to select photos from your device gallery or camera
                         </p>
                         <p className="text-xs text-on-surface/60 max-w-sm mx-auto">
-                          Choose up to 8 photos (JPEG, PNG, WEBP). Photos are automatically compressed for high-speed upload.
+                          Choose up to 8 photos from your gallery or take fresh pictures. High-resolution images are automatically compressed.
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        className="mt-2 pointer-events-none"
-                        leftIcon={<ImagePlus className="h-4 w-4" />}
-                      >
-                        Browse Device Gallery
-                      </Button>
+                      <span className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded text-xs font-semibold bg-surface-low text-on-surface border border-surface-dim shadow-xs hover:bg-brand-primary hover:text-white transition-colors">
+                        <ImagePlus className="h-4 w-4" />
+                        Choose from Gallery / Camera
+                      </span>
                     </div>
                   )}
-                </div>
+                </label>
               )}
 
               {/* Uploaded Photos Grid */}
@@ -737,17 +733,16 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
 
                     {/* Quick Add More Card if under 8 photos */}
                     {formData.images.length < 8 && !isProcessingPhotos && (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-lg border-2 border-dashed border-surface-dim hover:border-brand-primary/70 hover:bg-surface-lowest text-on-surface/70 hover:text-brand-primary transition-all text-xs font-medium"
+                      <label
+                        htmlFor="commodity-photo-upload"
+                        className="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-lg border-2 border-dashed border-surface-dim hover:border-brand-primary/70 hover:bg-surface-lowest text-on-surface/70 hover:text-brand-primary transition-all text-xs font-medium cursor-pointer select-none"
                       >
                         <ImagePlus className="h-5 w-5" />
                         <span>+ Add More</span>
                         <span className="text-[10px] text-on-surface/50">
                           ({8 - formData.images.length} left)
                         </span>
-                      </button>
+                      </label>
                     )}
                   </div>
                 </div>
