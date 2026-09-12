@@ -95,6 +95,23 @@ export class SmsOtpProvider implements OtpDeliveryProvider {
 }
 
 /**
+ * Formats sender email, allowing flexible format:
+ * - 'EcoFarm <no-reply@ayangiri.com>'
+ * - 'no-reply@ayangiri.com' -> 'EcoFarm <no-reply@ayangiri.com>'
+ * - Default: 'EcoFarm <onboarding@resend.dev>'
+ */
+export function formatSenderEmail(rawFrom: string | undefined): string {
+  if (!rawFrom || !rawFrom.trim()) {
+    return "EcoFarm <onboarding@resend.dev>";
+  }
+  const trimmed = rawFrom.trim();
+  if (trimmed.includes("<") && trimmed.includes(">")) {
+    return trimmed;
+  }
+  return `EcoFarm <${trimmed}>`;
+}
+
+/**
  * Production Email Provider Adapter (Resend HTTP API)
  */
 export class EmailOtpProvider implements OtpDeliveryProvider {
@@ -102,7 +119,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
 
   async send(payload: OtpDeliveryPayload): Promise<DeliveryResult> {
     const apiKey = process.env.RESEND_API_KEY || process.env.OTP_EMAIL_API_KEY;
-    const fromEmail = process.env.OTP_EMAIL_FROM || "EcoFarm <onboarding@resend.dev>";
+    const fromEmail = formatSenderEmail(process.env.OTP_EMAIL_FROM);
 
     // If Email gateway credentials are not configured
     if (!apiKey) {

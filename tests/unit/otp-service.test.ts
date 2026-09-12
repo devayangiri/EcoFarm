@@ -1,5 +1,6 @@
-﻿import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OtpService, OTP_MAX_ATTEMPTS } from "@/services/otp.service";
+import { formatSenderEmail } from "@/services/otp-delivery.service";
 import {
   normalizePhone,
   normalizeEmail,
@@ -216,6 +217,22 @@ describe("OTP Service & Normalizers Unit Tests", () => {
           otp: "000000",
         })
       ).rejects.toThrow(/Maximum verification attempts exceeded/);
+    });
+  });
+
+  describe("5. OTP Email Sender Configuration", () => {
+    it("should format sender with EcoFarm brand name when raw email is provided", () => {
+      expect(formatSenderEmail("no-reply@ayangiri.com")).toBe("EcoFarm <no-reply@ayangiri.com>");
+    });
+
+    it("should preserve custom display name when brackets are provided", () => {
+      expect(formatSenderEmail("EcoFarm <no-reply@ayangiri.com>")).toBe("EcoFarm <no-reply@ayangiri.com>");
+    });
+
+    it("should fall back to onboarding@resend.dev when undefined or empty", () => {
+      expect(formatSenderEmail(undefined)).toBe("EcoFarm <onboarding@resend.dev>");
+      expect(formatSenderEmail("")).toBe("EcoFarm <onboarding@resend.dev>");
+      expect(formatSenderEmail("   ")).toBe("EcoFarm <onboarding@resend.dev>");
     });
   });
 });
