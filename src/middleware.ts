@@ -115,7 +115,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const isAuthenticated = !!sessionPayload && sessionPayload.status !== "SUSPENDED";
+  const isAuthenticated = !!sessionPayload && sessionPayload.status === "ACTIVE";
 
   // 5. Handle auth pages (/login, /register, /role-select)
   if (pathname === "/login" || pathname === "/register" || pathname === "/role-select") {

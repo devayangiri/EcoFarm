@@ -112,7 +112,7 @@ export class AuthService {
           phone: normalizedPhone,
           passwordHash,
           role: input.role as UserRole,
-          status: "PENDING_VERIFICATION",
+          status: "ACTIVE",
         },
         select: {
           id: true,
@@ -135,7 +135,7 @@ export class AuthService {
         phone: normalizedPhone,
         passwordHash,
         role: input.role as UserRole,
-        status: "PENDING_VERIFICATION",
+        status: "ACTIVE",
         tokenVersion: 0,
         createdAt: new Date(),
         lastLoginAt: null,
@@ -213,9 +213,17 @@ export class AuthService {
       throw AppError.unauthorized("Invalid email/phone or password");
     }
 
-    // 4. Reject suspended accounts immediately
+    // 4. Reject suspended and unverified accounts immediately
     if (user.status === "SUSPENDED") {
       throw AppError.forbidden("Your account has been suspended. Please contact platform support.");
+    }
+
+    if (user.status === "PENDING_VERIFICATION") {
+      throw AppError.forbidden("Your account is pending verification. Please verify your OTP to activate your account.");
+    }
+
+    if (user.status !== "ACTIVE") {
+      throw AppError.forbidden("Your account is not active. Please complete verification.");
     }
 
     // 5. Update last login timestamp
@@ -295,6 +303,14 @@ export class AuthService {
 
     if (user.status === "SUSPENDED") {
       throw AppError.forbidden("Account suspended");
+    }
+
+    if (user.status === "PENDING_VERIFICATION") {
+      throw AppError.forbidden("Account pending verification");
+    }
+
+    if (user.status !== "ACTIVE") {
+      throw AppError.forbidden("Account not active");
     }
 
     return user;
@@ -419,12 +435,21 @@ export class AuthService {
     });
 
     // Send OTP via abstraction
-    await OtpDeliveryService.sendOtp({
+    const delivery = await OtpDeliveryService.sendOtp({
       destination,
       destinationType: destType,
       otp: challenge.otp,
       purpose: "REGISTRATION",
     });
+
+    if (!delivery.success) {
+      await OtpService.invalidateChallenge(challenge.challengeId);
+      if (process.env.NODE_ENV === "production") {
+        throw AppError.badRequest(
+          delivery.error || "Failed to deliver verification code. Please check your contact information or try again later."
+        );
+      }
+    }
 
     return {
       userId: user.id,
@@ -573,12 +598,21 @@ export class AuthService {
       userId,
     });
 
-    await OtpDeliveryService.sendOtp({
+    const delivery = await OtpDeliveryService.sendOtp({
       destination,
       destinationType,
       otp: challenge.otp,
       purpose: "REGISTRATION",
     });
+
+    if (!delivery.success) {
+      await OtpService.invalidateChallenge(challenge.challengeId);
+      if (process.env.NODE_ENV === "production") {
+        throw AppError.badRequest(
+          delivery.error || "Failed to deliver verification code. Please try again later."
+        );
+      }
+    }
 
     return {
       success: true,
@@ -635,12 +669,17 @@ export class AuthService {
           userId: user.id,
         });
 
-        await OtpDeliveryService.sendOtp({
+        const delivery = await OtpDeliveryService.sendOtp({
           destination: normalized,
           destinationType: destType,
           otp: challenge.otp,
           purpose: "PASSWORD_RESET",
         });
+
+        if (!delivery.success) {
+          await OtpService.invalidateChallenge(challenge.challengeId);
+          console.error(`[AuthService] Password reset OTP delivery failed: ${delivery.error}`);
+        }
       } catch (err) {
         if (err instanceof AppError && err.statusCode === 429) {
           throw err;

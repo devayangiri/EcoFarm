@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -47,6 +47,30 @@ export function RegisterForm() {
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const PENDING_REG_KEY = "ecofarm_pending_registration";
+
+  // Recover pending OTP challenge from sessionStorage on page reload
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = sessionStorage.getItem(PENDING_REG_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.verificationToken && data.email) {
+          setVerificationToken(data.verificationToken);
+          setMaskedDestination(data.destination || data.email);
+          setEmail(data.email);
+          if (data.fullName) setFullName(data.fullName);
+          if (data.role) setRole(data.role);
+          setDestinationType(data.destinationType || "EMAIL");
+          setStep(3);
+        }
+      }
+    } catch {
+      // Ignore sessionStorage errors
+    }
+  }, []);
 
   // Countdown timer effect for resend cooldown and OTP expiration
   useEffect(() => {
@@ -144,6 +168,24 @@ export function RegisterForm() {
       setOtp("");
       setIsLoading(false);
       setStep(3);
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem(
+            PENDING_REG_KEY,
+            JSON.stringify({
+              verificationToken: result.data.verificationToken,
+              destination: result.data.destination || email.trim().toLowerCase(),
+              destinationType: result.data.destinationType || "EMAIL",
+              email: email.trim().toLowerCase(),
+              fullName,
+              role,
+            })
+          );
+        } catch {
+          // Ignore storage errors
+        }
+      }
     } catch {
       setError("Unable to connect to the server. Please check your network and try again.");
       setIsLoading(false);
@@ -187,6 +229,15 @@ export function RegisterForm() {
         setError(result.error?.message || "Invalid or expired verification code. Please try again.");
         setIsVerifying(false);
         return;
+      }
+
+      // Clear pending registration from sessionStorage
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem(PENDING_REG_KEY);
+        } catch {
+          // Ignore storage errors
+        }
       }
 
       // Verification successful -> redirect to dashboard
@@ -542,9 +593,17 @@ export function RegisterForm() {
             <button
               type="button"
               onClick={() => {
+                if (typeof window !== "undefined") {
+                  try {
+                    sessionStorage.removeItem(PENDING_REG_KEY);
+                  } catch {
+                    // Ignore storage errors
+                  }
+                }
                 setStep(1);
                 setError(null);
                 setInfoMessage(null);
+                setOtp("");
               }}
               className="w-full text-center text-xs text-slate-neutral hover:text-on-surface hover:underline transition-colors"
             >

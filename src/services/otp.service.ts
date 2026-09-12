@@ -227,6 +227,22 @@ export class OtpService {
   }
 
   /**
+   * Immediately invalidates an active challenge (e.g. if delivery fails after creation)
+   */
+  static async invalidateChallenge(challengeId: string): Promise<void> {
+    const now = new Date();
+    try {
+      await prisma.otpVerification.update({
+        where: { id: challengeId },
+        data: { consumedAt: now },
+      });
+    } catch {
+      const rec = devOtpStore.get(challengeId);
+      if (rec) rec.consumedAt = now;
+    }
+  }
+
+  /**
    * Verifies an OTP challenge against destination, purpose, and attempt guards.
    */
   static async verifyOtpChallenge(params: VerifyOtpChallengeParams): Promise<{

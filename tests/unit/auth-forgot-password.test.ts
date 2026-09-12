@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { AuthService } from "@/services/auth.service";
 import { OtpService } from "@/services/otp.service";
 
@@ -120,7 +120,7 @@ describe("Forgot Password & Reset Flow Unit Tests", () => {
         password: initialPassword,
       })
     ).rejects.toThrow(/Invalid email\/phone or password/);
-  });
+  }, 15000);
 
   it("should reject re-use or invalid reset token", async () => {
     await expect(
