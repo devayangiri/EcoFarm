@@ -50,6 +50,11 @@ const envSchema = z.object({
     .string()
     .optional()
     .default("https://ayan1.app.n8n.cloud/webhook/ecofarm-ai"),
+  OTP_SMS_API_KEY: z.string().optional(),
+  OTP_SMS_SENDER_ID: z.string().optional(),
+  OTP_EMAIL_API_KEY: z.string().optional(),
+  OTP_EMAIL_FROM: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
 });
 
 const rawAuthSecret =
@@ -76,4 +81,9 @@ export const env = envSchema.parse({
   RAZORPAY_KEY_SECRET: sanitizeEnv(process.env.RAZORPAY_KEY_SECRET),
   RAZORPAY_WEBHOOK_SECRET: sanitizeEnv(process.env.RAZORPAY_WEBHOOK_SECRET),
   ECOFARM_AI_WEBHOOK_URL: sanitizeAiWebhookUrl(process.env.ECOFARM_AI_WEBHOOK_URL),
+  OTP_SMS_API_KEY: sanitizeEnv(process.env.OTP_SMS_API_KEY),
+  OTP_SMS_SENDER_ID: sanitizeEnv(process.env.OTP_SMS_SENDER_ID),
+  OTP_EMAIL_API_KEY: sanitizeEnv(process.env.OTP_EMAIL_API_KEY),
+  OTP_EMAIL_FROM: sanitizeEnv(process.env.OTP_EMAIL_FROM),
+  RESEND_API_KEY: sanitizeEnv(process.env.RESEND_API_KEY),
 });

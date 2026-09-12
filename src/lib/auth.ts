@@ -75,6 +75,59 @@ export async function verifySessionToken(token: string): Promise<UserSession | n
   }
 }
 
+export const PASSWORD_RESET_EXPIRY_SECONDS = 15 * 60; // 15 minutes
+
+/**
+ * Generates a short-lived, purpose-bound password reset authorization token
+ */
+export async function createPasswordResetToken(payload: {
+  userId: string;
+  email?: string;
+  phone?: string | null;
+}): Promise<string> {
+  const secretKey = getJwtSecretKey();
+
+  return new SignJWT({
+    userId: payload.userId,
+    email: payload.email || "",
+    phone: payload.phone ?? null,
+    purpose: "PASSWORD_RESET",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${PASSWORD_RESET_EXPIRY_SECONDS}s`)
+    .setSubject(payload.userId)
+    .sign(secretKey);
+}
+
+/**
+ * Verifies a password reset token and confirms purpose-binding
+ */
+export async function verifyPasswordResetToken(token: string): Promise<{
+  userId: string;
+  email?: string;
+  phone?: string | null;
+} | null> {
+  try {
+    const secretKey = getJwtSecretKey();
+    const { payload } = await jwtVerify(token, secretKey, {
+      algorithms: ["HS256"],
+    });
+
+    if (payload.purpose !== "PASSWORD_RESET" || !payload.userId) {
+      return null;
+    }
+
+    return {
+      userId: payload.userId as string,
+      email: (payload.email as string) || undefined,
+      phone: (payload.phone as string | null) || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Cookie option generator for production-grade HTTP-only cookies
  */

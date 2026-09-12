@@ -29,6 +29,14 @@ export class AppError extends Error {
     return new AppError("VALIDATION_ERROR", message, 422, details);
   }
 
+  static badRequest(message: string = "Bad request", details?: unknown) {
+    return new AppError("VALIDATION_ERROR", message, 400, details);
+  }
+
+  static tooManyRequests(message: string = "Too many requests, please try again later", details?: unknown) {
+    return new AppError("RATE_LIMITED", message, 429, details);
+  }
+
   static unauthorized(message: string = "Authentication required") {
     return new AppError("UNAUTHORIZED", message, 401);
   }

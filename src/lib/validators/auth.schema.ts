@@ -63,3 +63,69 @@ export const roleSelectSchema = z.object({
 });
 
 export type RoleSelectInput = z.infer<typeof roleSelectSchema>;
+
+// OTP verification for registration
+export const verifyRegistrationOtpSchema = z.object({
+  verificationToken: z.string().min(1, "Verification challenge token is required"),
+  destination: z.string().min(3, "Destination address is required"),
+  destinationType: z.enum(["EMAIL", "MOBILE"]).optional(),
+  otp: z
+    .string()
+    .length(6, "Verification code must be 6 digits")
+    .regex(/^\d+$/, "Verification code must contain only digits"),
+});
+
+export type VerifyRegistrationOtpInput = z.infer<typeof verifyRegistrationOtpSchema>;
+
+// OTP resend schema
+export const resendOtpSchema = z.object({
+  verificationToken: z.string().optional(),
+  destination: z.string().optional(),
+  destinationType: z.enum(["EMAIL", "MOBILE"]).optional(),
+  purpose: z.enum(["REGISTRATION", "PASSWORD_RESET"]).default("REGISTRATION"),
+});
+
+export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
+
+// Forgot password request schema
+export const forgotPasswordRequestSchema = z.object({
+  identifier: z
+    .string()
+    .trim()
+    .min(3, "Please enter your registered email or mobile number"),
+});
+
+export type ForgotPasswordRequestInput = z.infer<typeof forgotPasswordRequestSchema>;
+
+// Forgot password verify OTP schema
+export const forgotPasswordVerifySchema = z.object({
+  identifier: z
+    .string()
+    .trim()
+    .min(3, "Please enter your registered email or mobile number"),
+  otp: z
+    .string()
+    .length(6, "Verification code must be 6 digits")
+    .regex(/^\d+$/, "Verification code must contain only digits"),
+});
+
+export type ForgotPasswordVerifyInput = z.infer<typeof forgotPasswordVerifySchema>;
+
+// Reset password with authorization token schema
+export const resetPasswordSchema = z
+  .object({
+    resetToken: z.string().min(10, "Invalid or missing reset authorization token"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

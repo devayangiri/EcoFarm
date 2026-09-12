@@ -1,30 +1,29 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { registerSchema } from "@/lib/validators/auth.schema";
+import { verifyRegistrationOtpSchema } from "@/lib/validators/auth.schema";
 import { AuthService } from "@/services/auth.service";
 import { AppError } from "@/lib/errors";
 import { getSessionCookieOptions } from "@/lib/auth";
-import type { ApiResponse } from "@/types/api";
-
 import { RateLimiter, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
+import type { ApiResponse } from "@/types/api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    const rateLimit = RateLimiter.check(`register:${ip}`, RATE_LIMIT_CONFIGS.AUTH_REGISTER);
+    const rateLimit = RateLimiter.check(`otp_verify:${ip}`, RATE_LIMIT_CONFIGS.AUTH_OTP_VERIFY);
     if (!rateLimit.success) {
       return RateLimiter.createTooManyRequestsResponse(rateLimit);
     }
 
     const body = await request.json();
-    const parseResult = registerSchema.safeParse(body);
+    const parseResult = verifyRegistrationOtpSchema.safeParse(body);
 
     if (!parseResult.success) {
       const fieldErrors = parseResult.error.flatten().fieldErrors;
       const firstErrorMessage = Object.values(fieldErrors)[0]?.[0] || "Validation failed";
-      
+
       const errorResponse: ApiResponse = {
         success: false,
         error: {
@@ -36,39 +35,22 @@ export async function POST(request: Request) {
       return NextResponse.json(errorResponse, { status: 422 });
     }
 
-    // Direct registration support for automated tests specifying autoActivate: true
-    if (body.autoActivate === true && process.env.NODE_ENV === "test") {
-      const { user, token, redirectUrl } = await AuthService.register(parseResult.data);
-      const cookieStore = cookies();
-      const cookieOptions = getSessionCookieOptions();
-      cookieStore.set(cookieOptions.name, token, cookieOptions);
+    const { user, token, redirectUrl } = await AuthService.verifyRegistrationOtp(parseResult.data);
 
-      return NextResponse.json(
-        {
-          success: true,
-          data: { user, redirectUrl },
-        },
-        { status: 201 }
-      );
-    }
-
-    const result = await AuthService.initiateRegistration(parseResult.data, {
-      destinationType: body.destinationType,
-    });
+    // Set secure HTTP-only session cookie
+    const cookieStore = cookies();
+    const cookieOptions = getSessionCookieOptions();
+    cookieStore.set(cookieOptions.name, token, cookieOptions);
 
     const successResponse: ApiResponse<{
-      verificationToken: string;
-      destination: string;
-      destinationType: string;
-      expiresAt: Date;
+      user: typeof user;
+      redirectUrl: string;
     }> = {
       success: true,
-      message: "Verification code sent to your email/mobile. Please verify to complete registration.",
+      message: "Account verified and activated successfully.",
       data: {
-        verificationToken: result.verificationToken,
-        destination: result.destination,
-        destinationType: result.destinationType,
-        expiresAt: result.expiresAt,
+        user,
+        redirectUrl,
       },
     };
 
@@ -86,12 +68,12 @@ export async function POST(request: Request) {
       return NextResponse.json(errResponse, { status: error.statusCode });
     }
 
-    console.error("Unhandled Registration Error:", error);
+    console.error("Unhandled Registration OTP Verification Error:", error);
     const serverErrResponse: ApiResponse = {
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred during registration. Please try again.",
+        message: "An unexpected error occurred during verification. Please try again.",
       },
     };
     return NextResponse.json(serverErrResponse, { status: 500 });

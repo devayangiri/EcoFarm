@@ -86,6 +86,9 @@ export class RateLimiter {
 export const RATE_LIMIT_CONFIGS = {
   AUTH_LOGIN: { limit: 10, windowMs: 60 * 1000 }, // 10 attempts per minute per IP
   AUTH_REGISTER: { limit: 5, windowMs: 60 * 1000 }, // 5 registrations per minute per IP
+  AUTH_OTP_REQUEST: { limit: 5, windowMs: 60 * 1000 }, // 5 OTP generation requests per minute per IP/destination
+  AUTH_OTP_VERIFY: { limit: 10, windowMs: 60 * 1000 }, // 10 OTP verification attempts per minute per IP
+  AUTH_PASSWORD_RESET: { limit: 5, windowMs: 60 * 1000 }, // 5 password resets per minute per IP
   MESSAGING_SEND: { limit: 30, windowMs: 60 * 1000 }, // 30 messages per minute per user
   UPLOAD_PRESIGN: { limit: 20, windowMs: 60 * 1000 }, // 20 presigned uploads per minute per user
   COMMERCE_CHECKOUT: { limit: 10, windowMs: 60 * 1000 }, // 10 checkouts per minute per user
