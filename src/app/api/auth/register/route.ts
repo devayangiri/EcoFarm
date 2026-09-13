@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { registerSchema } from "@/lib/validators/auth.schema";
 import { AuthService } from "@/services/auth.service";
-import { AppError } from "@/lib/errors";
+import { AppError, isAppError } from "@/lib/errors";
 import { getSessionCookieOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/types/api";
 
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(successResponse, { status: 200 });
   } catch (error: any) {
-    if (error instanceof AppError) {
+    if (isAppError(error)) {
       const errResponse: ApiResponse = {
         success: false,
         error: {

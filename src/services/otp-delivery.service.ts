@@ -104,7 +104,10 @@ export function formatSenderEmail(rawFrom: string | undefined): string {
   if (!rawFrom || !rawFrom.trim()) {
     return "EcoFarm <onboarding@resend.dev>";
   }
-  const trimmed = rawFrom.trim();
+  const trimmed = rawFrom.trim().replace(/^["']|["']$/g, "").trim();
+  if (!trimmed) {
+    return "EcoFarm <onboarding@resend.dev>";
+  }
   if (trimmed.includes("<") && trimmed.includes(">")) {
     return trimmed;
   }
@@ -118,16 +121,31 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
   readonly name = "email-gateway";
 
   async send(payload: OtpDeliveryPayload): Promise<DeliveryResult> {
-    const apiKey = process.env.RESEND_API_KEY || process.env.OTP_EMAIL_API_KEY;
-    const fromEmail = formatSenderEmail(process.env.OTP_EMAIL_FROM);
+    const rawKey = process.env.RESEND_API_KEY || process.env.OTP_EMAIL_API_KEY;
+    const apiKey = rawKey?.trim().replace(/^["']|["']$/g, "");
+    const rawFrom = process.env.OTP_EMAIL_FROM;
+    const cleanedFrom = rawFrom?.trim().replace(/^["']|["']$/g, "");
+    const fromEmail = formatSenderEmail(cleanedFrom);
+
+    const apiKeyConfigured = Boolean(apiKey && apiKey.length > 0);
+    const emailFromConfigured = Boolean(cleanedFrom && cleanedFrom.length > 0);
 
     // If Email gateway credentials are not configured
-    if (!apiKey) {
+    if (!apiKeyConfigured) {
+      console.error("[OTP EMAIL DEBUG]", {
+        provider: "resend",
+        emailFromConfigured,
+        apiKeyConfigured: false,
+        requestStarted: false,
+        resendStatus: null,
+        providerMessageId: null,
+        error: "Missing RESEND_API_KEY / OTP_EMAIL_API_KEY in environment",
+      });
+
       if (process.env.NODE_ENV !== "production") {
         // Safe development fallback
         return new ConsoleDevOtpProvider().send(payload);
       }
-      console.error("[EmailOtpProvider] Missing RESEND_API_KEY / OTP_EMAIL_API_KEY in production environment.");
       return {
         success: false,
         provider: this.name,
@@ -183,14 +201,23 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
 
       const textContent = `EcoFarm Verification\n\nYour one-time verification code to ${actionText} is: ${payload.otp}\n\nThis code will expire in 10 minutes.\nIf you did not request this code, please ignore this email.`;
 
-      const response = await fetch("https://api.resend.com/emails", {
+      console.info("[OTP EMAIL DEBUG]", {
+        provider: "resend",
+        emailFromConfigured,
+        apiKeyConfigured: true,
+        requestStarted: true,
+        fromEmail,
+      });
+
+      let activeFrom = fromEmail;
+      let response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: fromEmail,
+          from: activeFrom,
           to: [payload.destination],
           subject,
           text: textContent,
@@ -198,13 +225,46 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
         }),
       });
 
-      const resData = await response.json().catch(() => null);
+      let resData = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        console.error("[EmailOtpProvider] Resend API error:", {
-          status: response.status,
-          error: resData?.message || response.statusText,
-        });
+      // Auto-fallback: if Resend rejects custom unverified domain with 403, retry once with onboarding@resend.dev
+      if (!response.ok && response.status === 403 && !activeFrom.includes("onboarding@resend.dev")) {
+        const errMsg = String(resData?.message || "").toLowerCase();
+        if (errMsg.includes("domain") || errMsg.includes("verify") || errMsg.includes("not verified")) {
+          console.warn("[OTP EMAIL DEBUG] Unverified custom domain in Resend, retrying with onboarding@resend.dev fallback");
+          activeFrom = "EcoFarm <onboarding@resend.dev>";
+          response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: activeFrom,
+              to: [payload.destination],
+              subject,
+              text: textContent,
+              html: htmlContent,
+            }),
+          });
+          resData = await response.json().catch(() => null);
+        }
+      }
+
+      const isSuccess = response.ok;
+      const errorMsg = !isSuccess ? (resData?.message || `HTTP ${response.status}: ${response.statusText}`) : null;
+
+      console.info("[OTP EMAIL DEBUG]", {
+        provider: "resend",
+        emailFromConfigured,
+        apiKeyConfigured: true,
+        requestStarted: true,
+        resendStatus: response.status,
+        providerMessageId: resData?.id || null,
+        error: errorMsg,
+      });
+
+      if (!isSuccess) {
         return {
           success: false,
           provider: "resend",
@@ -218,7 +278,15 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
         providerMessageId: resData?.id || `resend-${Date.now()}`,
       };
     } catch (err: any) {
-      console.error("[EmailOtpProvider] Dispatch exception:", err?.message || err);
+      console.error("[OTP EMAIL DEBUG]", {
+        provider: "resend",
+        emailFromConfigured,
+        apiKeyConfigured: true,
+        requestStarted: true,
+        resendStatus: null,
+        providerMessageId: null,
+        error: err?.message || "Dispatch exception",
+      });
       return {
         success: false,
         provider: this.name,
@@ -233,14 +301,27 @@ export class OtpDeliveryService {
    * Dispatches an OTP to the destination using the appropriate provider.
    */
   static async sendOtp(payload: OtpDeliveryPayload): Promise<DeliveryResult> {
-    // In development or test, default to ConsoleDevOtpProvider unless an explicit provider is forced
-    if (
+    const isDevFallback =
       process.env.NODE_ENV === "test" ||
       (process.env.NODE_ENV !== "production" &&
         !process.env.OTP_SMS_API_KEY &&
         !process.env.OTP_EMAIL_API_KEY &&
-        !process.env.RESEND_API_KEY)
-    ) {
+        !process.env.RESEND_API_KEY);
+
+    const selectedProvider = isDevFallback
+      ? "console-dev"
+      : payload.destinationType === "MOBILE"
+      ? "sms-gateway"
+      : "email-gateway";
+
+    console.info("[OtpDeliveryService] Provider selected:", {
+      destinationType: payload.destinationType,
+      purpose: payload.purpose,
+      selectedProvider,
+      nodeEnv: process.env.NODE_ENV,
+    });
+
+    if (isDevFallback) {
       return new ConsoleDevOtpProvider().send(payload);
     }
 

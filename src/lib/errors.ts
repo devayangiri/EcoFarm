@@ -66,8 +66,17 @@ export class AppError extends Error {
   }
 }
 
+export function isAppError(error: unknown): error is AppError {
+  if (!error || typeof error !== "object") return false;
+  return (
+    error instanceof AppError ||
+    (error as any).name === "AppError" ||
+    (typeof (error as any).statusCode === "number" && typeof (error as any).code === "string")
+  );
+}
+
 export function handleError(error: unknown) {
-  if (error instanceof AppError) {
+  if (isAppError(error)) {
     return NextResponse.json(
       {
         success: false,

@@ -444,11 +444,20 @@ export class AuthService {
 
     if (!delivery.success) {
       await OtpService.invalidateChallenge(challenge.challengeId);
+      console.error(`[AuthService] Registration OTP delivery failed:`, {
+        provider: delivery.provider,
+        error: delivery.error,
+      });
       if (process.env.NODE_ENV === "production") {
         throw AppError.badRequest(
           delivery.error || "Failed to deliver verification code. Please check your contact information or try again later."
         );
       }
+    } else {
+      console.info(`[AuthService] Registration OTP dispatched successfully:`, {
+        provider: delivery.provider,
+        providerMessageId: delivery.providerMessageId,
+      });
     }
 
     return {
@@ -607,11 +616,20 @@ export class AuthService {
 
     if (!delivery.success) {
       await OtpService.invalidateChallenge(challenge.challengeId);
+      console.error(`[AuthService] Registration OTP resend failed:`, {
+        provider: delivery.provider,
+        error: delivery.error,
+      });
       if (process.env.NODE_ENV === "production") {
         throw AppError.badRequest(
           delivery.error || "Failed to deliver verification code. Please try again later."
         );
       }
+    } else {
+      console.info(`[AuthService] Registration OTP resend dispatched successfully:`, {
+        provider: delivery.provider,
+        providerMessageId: delivery.providerMessageId,
+      });
     }
 
     return {
@@ -656,11 +674,20 @@ export class AuthService {
     }
 
     if (!user) {
-      user = devUserStore.get(normalized);
-    }
-
-    // Only dispatch if user exists and is not suspended
-    if (user && user.status !== "SUSPENDED") {
+      console.warn("[AuthService] Password reset requested for non-existent account:", {
+        destType,
+        destinationDomain: normalized.split("@")[1] || "unknown",
+        accountExists: false,
+      });
+    } else if (user.status === "SUSPENDED") {
+      console.warn("[AuthService] Password reset blocked: User account is suspended", {
+        userId: user.id,
+      });
+    } else {
+      console.info("[AuthService] Initiating password reset OTP challenge for user:", {
+        userId: user.id,
+        destType,
+      });
       try {
         const challenge = await OtpService.createOtpChallenge({
           destination: normalized,
@@ -678,7 +705,15 @@ export class AuthService {
 
         if (!delivery.success) {
           await OtpService.invalidateChallenge(challenge.challengeId);
-          console.error(`[AuthService] Password reset OTP delivery failed: ${delivery.error}`);
+          console.error(`[AuthService] Password reset OTP delivery failed:`, {
+            provider: delivery.provider,
+            error: delivery.error,
+          });
+        } else {
+          console.info(`[AuthService] Password reset OTP delivered successfully:`, {
+            provider: delivery.provider,
+            providerMessageId: delivery.providerMessageId,
+          });
         }
       } catch (err) {
         if (err instanceof AppError && err.statusCode === 429) {
