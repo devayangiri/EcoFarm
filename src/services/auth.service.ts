@@ -43,6 +43,25 @@ if (process.env.NODE_ENV !== "production") {
   globalForAuth.devUserStore = devUserStore;
 }
 
+export interface LastPasswordResetAttempt {
+  timestamp: string;
+  destType: string;
+  userFound: boolean;
+  userStatus: string | null;
+  challengeCreated: boolean;
+  deliveryAttempted: boolean;
+  deliverySuccess: boolean | null;
+  deliveryError: string | null;
+}
+
+const globalForPwdReset = globalThis as unknown as {
+  lastPasswordResetAttempt: LastPasswordResetAttempt | undefined;
+};
+
+export function getLastPasswordResetAttempt(): LastPasswordResetAttempt | null {
+  return globalForPwdReset.lastPasswordResetAttempt || null;
+}
+
 export class AuthService {
   /**
    * Registers a new user with an allowed public role
@@ -674,12 +693,38 @@ export class AuthService {
     }
 
     if (!user) {
+      user = devUserStore.get(normalized);
+    }
+
+    if (!user) {
+      globalForPwdReset.lastPasswordResetAttempt = {
+        timestamp: new Date().toISOString(),
+        destType,
+        userFound: false,
+        userStatus: null,
+        challengeCreated: false,
+        deliveryAttempted: false,
+        deliverySuccess: null,
+        deliveryError: "User account not found in database",
+      };
+
       console.warn("[AuthService] Password reset requested for non-existent account:", {
         destType,
         destinationDomain: normalized.split("@")[1] || "unknown",
         accountExists: false,
       });
     } else if (user.status === "SUSPENDED") {
+      globalForPwdReset.lastPasswordResetAttempt = {
+        timestamp: new Date().toISOString(),
+        destType,
+        userFound: true,
+        userStatus: user.status,
+        challengeCreated: false,
+        deliveryAttempted: false,
+        deliverySuccess: null,
+        deliveryError: "User account is suspended",
+      };
+
       console.warn("[AuthService] Password reset blocked: User account is suspended", {
         userId: user.id,
       });
@@ -688,6 +733,12 @@ export class AuthService {
         userId: user.id,
         destType,
       });
+
+      let challengeCreated = false;
+      let deliveryAttempted = false;
+      let deliverySuccess: boolean | null = null;
+      let deliveryError: string | null = null;
+
       try {
         const challenge = await OtpService.createOtpChallenge({
           destination: normalized,
@@ -695,6 +746,7 @@ export class AuthService {
           purpose: "PASSWORD_RESET",
           userId: user.id,
         });
+        challengeCreated = true;
 
         const delivery = await OtpDeliveryService.sendOtp({
           destination: normalized,
@@ -702,6 +754,9 @@ export class AuthService {
           otp: challenge.otp,
           purpose: "PASSWORD_RESET",
         });
+        deliveryAttempted = true;
+        deliverySuccess = delivery.success;
+        deliveryError = delivery.error || null;
 
         if (!delivery.success) {
           await OtpService.invalidateChallenge(challenge.challengeId);
@@ -715,11 +770,23 @@ export class AuthService {
             providerMessageId: delivery.providerMessageId,
           });
         }
-      } catch (err) {
+      } catch (err: any) {
+        deliveryError = err?.message || "Error creating/sending challenge";
         if (err instanceof AppError && err.statusCode === 429) {
           throw err;
         }
         console.error("Error creating/sending password reset challenge:", err);
+      } finally {
+        globalForPwdReset.lastPasswordResetAttempt = {
+          timestamp: new Date().toISOString(),
+          destType,
+          userFound: true,
+          userStatus: user.status,
+          challengeCreated,
+          deliveryAttempted,
+          deliverySuccess,
+          deliveryError,
+        };
       }
     }
 
