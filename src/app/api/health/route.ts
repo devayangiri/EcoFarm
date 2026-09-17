@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensureDatabaseSchema } from "@/lib/db-sync";
 import { formatSenderEmail, getLastOtpDebugState } from "@/services/otp-delivery.service";
 import { getLastPasswordResetAttempt, getLastLoginAttempt } from "@/services/auth.service";
 import type { ApiResponse } from "@/types/api";
@@ -20,6 +21,12 @@ export async function GET(request?: Request): Promise<NextResponse> {
     dbStatus = "connected";
   } catch {
     dbStatus = "disconnected";
+  }
+
+  // Ensure missing columns/tables are created if needed
+  let schemaSyncResult: any = null;
+  if (dbStatus === "connected") {
+    schemaSyncResult = await ensureDatabaseSchema();
   }
 
   let probeResult: any = null;
@@ -102,6 +109,7 @@ export async function GET(request?: Request): Promise<NextResponse> {
         nodeEnv: process.env.NODE_ENV || "unknown",
       },
       diagnostics: {
+        schemaSync: schemaSyncResult,
         lastPasswordResetAttempt: getLastPasswordResetAttempt(),
         lastLoginAttempt: getLastLoginAttempt(),
         lastOtpDebug: getLastOtpDebugState(),

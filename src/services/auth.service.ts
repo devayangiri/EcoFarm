@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureDatabaseSchema } from "@/lib/db-sync";
 import { AppError } from "@/lib/errors";
 import {
   hashPassword,
@@ -256,8 +257,16 @@ export class AuthService {
         });
       }
     } catch {
-      // Fallback store lookup
-      user = devUserStore.get(isEmail ? identifier.toLowerCase() : identifier);
+      await ensureDatabaseSchema();
+      try {
+        if (isEmail) {
+          user = await prisma.user.findFirst({
+            where: { email: identifier.toLowerCase() },
+          });
+        }
+      } catch {
+        user = devUserStore.get(isEmail ? identifier.toLowerCase() : identifier);
+      }
     }
 
     if (!user) {
@@ -829,7 +838,16 @@ export class AuthService {
         });
       }
     } catch {
-      user = devUserStore.get(normalized) || (destType === "MOBILE" ? devUserStore.get(normalized.replace(/^\+?91/, "")) : null);
+      await ensureDatabaseSchema();
+      try {
+        if (destType === "EMAIL") {
+          user = await prisma.user.findFirst({
+            where: { email: normalized },
+          });
+        }
+      } catch {
+        user = devUserStore.get(normalized) || (destType === "MOBILE" ? devUserStore.get(normalized.replace(/^\+?91/, "")) : null);
+      }
     }
 
     if (!user) {
