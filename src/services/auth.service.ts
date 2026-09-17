@@ -1045,12 +1045,14 @@ export class AuthService {
         throw AppError.notFound("Account not found");
       }
 
-      // Update password and increment tokenVersion to revoke all active sessions
+      // Update password, activate user, and increment tokenVersion to revoke all active sessions
       user = await prisma.user.update({
         where: { id: payload.userId },
         data: {
           passwordHash,
           tokenVersion: { increment: 1 },
+          status: "ACTIVE",
+          ...(payload.email ? { emailVerifiedAt: new Date() } : {}),
         },
       });
 
@@ -1062,6 +1064,7 @@ export class AuthService {
       if (devRecord) {
         devRecord.passwordHash = passwordHash;
         devRecord.tokenVersion = (devRecord.tokenVersion || 0) + 1;
+        devRecord.status = "ACTIVE";
         user = devRecord;
         await OtpService.invalidateUserChallenges(payload.userId, "PASSWORD_RESET");
       }

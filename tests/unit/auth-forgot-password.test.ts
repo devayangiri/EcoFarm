@@ -112,6 +112,7 @@ describe("Forgot Password & Reset Flow Unit Tests", () => {
     });
     expect(loginRes.token).toBeDefined();
     expect(loginRes.user.email).toBe(testEmail);
+    expect(loginRes.user.status).toBe("ACTIVE");
 
     // Login with old password should fail
     await expect(
@@ -120,6 +121,36 @@ describe("Forgot Password & Reset Flow Unit Tests", () => {
         password: initialPassword,
       })
     ).rejects.toThrow(/Invalid email\/phone or password/);
+  }, 15000);
+
+  it("should activate user upon password reset even if originally pending", async () => {
+    const testEmail = `forgot.pending.${Date.now()}@agriaqua.net`;
+    const regResult = await AuthService.initiateRegistration({
+      fullName: "Pending Activation User",
+      email: testEmail,
+      password: initialPassword,
+      confirmPassword: initialPassword,
+      role: "FARMER",
+    });
+
+    // Create PASSWORD_RESET challenge
+    const challenge = await OtpService.createOtpChallenge({
+      destination: testEmail,
+      destinationType: "EMAIL",
+      purpose: "PASSWORD_RESET",
+    });
+
+    const verifyRes = await AuthService.verifyPasswordResetOtp(testEmail, challenge.otp);
+    expect(verifyRes.success).toBe(true);
+
+    await AuthService.resetPassword(verifyRes.resetToken, updatedPassword);
+
+    // Login should now succeed and user should be ACTIVE
+    const loginRes = await AuthService.login({
+      identifier: testEmail,
+      password: updatedPassword,
+    });
+    expect(loginRes.user.status).toBe("ACTIVE");
   }, 15000);
 
   it("should reject re-use or invalid reset token", async () => {
