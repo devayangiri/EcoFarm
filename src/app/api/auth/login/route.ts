@@ -46,7 +46,18 @@ export async function POST(request: Request) {
       },
     };
 
-    return NextResponse.json(successResponse, { status: 200 });
+    const response = NextResponse.json(successResponse, { status: 200 });
+    response.cookies.set({
+      name: cookieOptions.name,
+      value: token,
+      httpOnly: cookieOptions.httpOnly,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      maxAge: cookieOptions.maxAge,
+      path: cookieOptions.path,
+    });
+
+    return response;
   } catch (error: any) {
     if (isAppError(error)) {
       const errResponse: ApiResponse = {

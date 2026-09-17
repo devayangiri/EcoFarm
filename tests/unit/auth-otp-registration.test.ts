@@ -3,6 +3,7 @@ import { AuthService } from "@/services/auth.service";
 import { OtpService } from "@/services/otp.service";
 import { OtpDeliveryService } from "@/services/otp-delivery.service";
 import { prisma } from "@/lib/prisma";
+import { verifySessionToken } from "@/lib/auth";
 
 // Mock Prisma to immediately route to memory fallback store in unit tests
 vi.mock("@/lib/prisma", () => ({
@@ -206,4 +207,41 @@ describe("Registration OTP Flow Unit Tests", () => {
     expect(loginResult.token).toBeDefined();
     expect(loginResult.redirectUrl).toBe("/buyer");
   });
+
+  it("should issue JWT with identical claims and active status matching middleware requirements", async () => {
+    const farmerEmail = `farmer.claims.${Date.now()}@agriaqua.net`;
+    let dispatchedOtp = "";
+    vi.spyOn(OtpDeliveryService, "sendOtp").mockImplementationOnce(async (payload) => {
+      dispatchedOtp = payload.otp;
+      return { success: true, provider: "mock-test", providerMessageId: "msg-claims" };
+    });
+
+    const initResult = await AuthService.initiateRegistration({
+      fullName: "Farmer Claims Test",
+      email: farmerEmail,
+      password: "StrongPassword2026!",
+      confirmPassword: "StrongPassword2026!",
+      role: "FARMER",
+    });
+
+    const verifyResponse = await AuthService.verifyRegistrationOtp({
+      verificationToken: initResult.verificationToken,
+      destination: farmerEmail,
+      purpose: "REGISTRATION",
+      otp: dispatchedOtp,
+    });
+
+    expect(verifyResponse.user.status).toBe("ACTIVE");
+    expect(verifyResponse.user.role).toBe("FARMER");
+    expect(verifyResponse.redirectUrl).toBe("/farmer");
+
+    // Verify JWT payload matches middleware expectations
+    const session = await verifySessionToken(verifyResponse.token);
+    expect(session).not.toBeNull();
+    expect(session?.userId).toBe(verifyResponse.user.id);
+    expect(session?.role).toBe("FARMER");
+    expect(session?.status).toBe("ACTIVE");
+    expect(session?.tokenVersion).toBe(0);
+  });
 });
+

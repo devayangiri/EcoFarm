@@ -154,8 +154,7 @@ export function RegisterForm() {
 
       // If direct registration occurred (e.g. test environment autoActivate)
       if (result.data?.redirectUrl && !result.data?.verificationToken) {
-        router.push(result.data.redirectUrl);
-        router.refresh();
+        window.location.href = result.data.redirectUrl;
         return;
       }
 
@@ -240,10 +239,9 @@ export function RegisterForm() {
         }
       }
 
-      // Verification successful -> redirect to dashboard
+      // Verification successful -> redirect to dashboard with full browser navigation
       const targetUrl = result.data.redirectUrl || "/";
-      router.push(targetUrl);
-      router.refresh();
+      window.location.href = targetUrl;
     } catch {
       setError("Unable to connect to the server. Please check your network and try again.");
       setIsVerifying(false);

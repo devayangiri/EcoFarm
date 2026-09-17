@@ -114,26 +114,6 @@ export function formatSenderEmail(rawFrom: string | undefined): string {
   return `EcoFarm <${trimmed}>`;
 }
 
-export interface LastOtpDebugState {
-  timestamp: string;
-  provider: string;
-  apiKeyConfigured: boolean;
-  emailFromConfigured: boolean;
-  requestStarted: boolean;
-  resendStatus: number | null;
-  providerMessageId: string | null;
-  error: string | null;
-  fromEmail: string;
-}
-
-const globalForOtpDebug = globalThis as unknown as {
-  lastOtpDebug: LastOtpDebugState | undefined;
-};
-
-export function getLastOtpDebugState(): LastOtpDebugState | null {
-  return globalForOtpDebug.lastOtpDebug || null;
-}
-
 /**
  * Production Email Provider Adapter (Resend HTTP API)
  */
@@ -152,8 +132,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
 
     // If Email gateway credentials are not configured
     if (!apiKeyConfigured) {
-      globalForOtpDebug.lastOtpDebug = {
-        timestamp: new Date().toISOString(),
+      console.error("[OTP EMAIL DEBUG]", {
         provider: "resend",
         emailFromConfigured,
         apiKeyConfigured: false,
@@ -161,10 +140,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
         resendStatus: null,
         providerMessageId: null,
         error: "Missing RESEND_API_KEY / OTP_EMAIL_API_KEY in environment",
-        fromEmail,
-      };
-
-      console.error("[OTP EMAIL DEBUG]", globalForOtpDebug.lastOtpDebug);
+      });
 
       if (process.env.NODE_ENV !== "production") {
         // Safe development fallback
@@ -278,8 +254,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
       const isSuccess = response.ok;
       const errorMsg = !isSuccess ? (resData?.message || `HTTP ${response.status}: ${response.statusText}`) : null;
 
-      globalForOtpDebug.lastOtpDebug = {
-        timestamp: new Date().toISOString(),
+      console.info("[OTP EMAIL DEBUG]", {
         provider: "resend",
         emailFromConfigured,
         apiKeyConfigured: true,
@@ -287,10 +262,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
         resendStatus: response.status,
         providerMessageId: resData?.id || null,
         error: errorMsg,
-        fromEmail: activeFrom,
-      };
-
-      console.info("[OTP EMAIL DEBUG]", globalForOtpDebug.lastOtpDebug);
+      });
 
       if (!isSuccess) {
         return {
@@ -306,8 +278,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
         providerMessageId: resData?.id || `resend-${Date.now()}`,
       };
     } catch (err: any) {
-      globalForOtpDebug.lastOtpDebug = {
-        timestamp: new Date().toISOString(),
+      console.error("[OTP EMAIL DEBUG]", {
         provider: "resend",
         emailFromConfigured,
         apiKeyConfigured: true,
@@ -315,10 +286,7 @@ export class EmailOtpProvider implements OtpDeliveryProvider {
         resendStatus: null,
         providerMessageId: null,
         error: err?.message || "Dispatch exception",
-        fromEmail,
-      };
-
-      console.error("[OTP EMAIL DEBUG]", globalForOtpDebug.lastOtpDebug);
+      });
       return {
         success: false,
         provider: this.name,

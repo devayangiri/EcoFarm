@@ -43,13 +43,24 @@ export async function POST(request: Request) {
       const cookieOptions = getSessionCookieOptions();
       cookieStore.set(cookieOptions.name, token, cookieOptions);
 
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: true,
           data: { user, redirectUrl },
         },
         { status: 201 }
       );
+      response.cookies.set({
+        name: cookieOptions.name,
+        value: token,
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        maxAge: cookieOptions.maxAge,
+        path: cookieOptions.path,
+      });
+
+      return response;
     }
 
     const result = await AuthService.initiateRegistration(parseResult.data, {
