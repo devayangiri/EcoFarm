@@ -15,10 +15,50 @@ import {
   normalizeDestination,
 } from "@/lib/normalizers/phone";
 import { OtpService } from "@/services/otp.service";
-import { OtpDeliveryService } from "@/services/otp-delivery.service";
+import { OtpDeliveryService, getLastOtpDebugState } from "@/services/otp-delivery.service";
 import type { RegisterInput, LoginInput } from "@/lib/validators/auth.schema";
 import type { UserRole, UserSession, UserStatus } from "@/types/role.types";
 import type { OtpDestinationType } from "@prisma/client";
+
+export interface PasswordResetAttemptDebug {
+  timestamp: string;
+  destType: string;
+  accountFound: boolean;
+  userStatus: string | null;
+  identifierNormalized: boolean;
+  challengeCreated: boolean;
+  challengePurpose: string;
+  deliveryProviderCalled: boolean;
+  resendRequestStarted: boolean;
+  resendStatus: number | null;
+  providerMessageId: string | null;
+  safeError: string | null;
+}
+
+export interface LoginAttemptDebug {
+  timestamp: string;
+  identifierNormalized: boolean;
+  accountFound: boolean;
+  userStatus: string | null;
+  hasPasswordHash: boolean;
+  passwordMatch: boolean;
+  errorCode: string | null;
+  safeErrorMessage: string | null;
+  sessionCreated: boolean;
+}
+
+const globalForAuthDebug = globalThis as unknown as {
+  lastPasswordResetAttempt: PasswordResetAttemptDebug | null;
+  lastLoginAttempt: LoginAttemptDebug | null;
+};
+
+export function getLastPasswordResetAttempt(): PasswordResetAttemptDebug | null {
+  return globalForAuthDebug.lastPasswordResetAttempt || null;
+}
+
+export function getLastLoginAttempt(): LoginAttemptDebug | null {
+  return globalForAuthDebug.lastLoginAttempt || null;
+}
 
 interface DevUserRecord {
   id: string;
@@ -188,11 +228,33 @@ export class AuthService {
 
     // 1. Find user by email or phone in DB
     try {
-      user = await prisma.user.findFirst({
-        where: isEmail
-          ? { email: identifier.toLowerCase() }
-          : { phone: identifier },
-      });
+      if (isEmail) {
+        user = await prisma.user.findFirst({
+          where: { email: identifier.toLowerCase() },
+        });
+      } else {
+        const cleanedPhone = identifier.replace(/[\s\-\.\(\)]/g, "");
+        const rawPhone = identifier;
+        const e164Phone = cleanedPhone.startsWith("+")
+          ? cleanedPhone
+          : cleanedPhone.length === 10
+          ? `+91${cleanedPhone}`
+          : cleanedPhone.startsWith("91") && cleanedPhone.length === 12
+          ? `+${cleanedPhone}`
+          : cleanedPhone;
+        const nationalPhone = cleanedPhone.replace(/^\+?91/, "");
+
+        user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { phone: rawPhone },
+              { phone: cleanedPhone },
+              { phone: e164Phone },
+              { phone: nationalPhone },
+            ],
+          },
+        });
+      }
     } catch {
       // Fallback store lookup
       user = devUserStore.get(isEmail ? identifier.toLowerCase() : identifier);
@@ -204,25 +266,80 @@ export class AuthService {
 
     // 2. Generic failure message to prevent username enumeration
     if (!user || !user.passwordHash) {
+      globalForAuthDebug.lastLoginAttempt = {
+        timestamp: new Date().toISOString(),
+        identifierNormalized: true,
+        accountFound: !!user,
+        userStatus: user?.status || null,
+        hasPasswordHash: !!user?.passwordHash,
+        passwordMatch: false,
+        errorCode: "UNAUTHORIZED",
+        safeErrorMessage: "Account not found or passwordHash missing",
+        sessionCreated: false,
+      };
       throw AppError.unauthorized("Invalid email/phone or password");
     }
 
     // 3. Verify password
     const isPasswordValid = await verifyPassword(input.password, user.passwordHash);
     if (!isPasswordValid) {
+      globalForAuthDebug.lastLoginAttempt = {
+        timestamp: new Date().toISOString(),
+        identifierNormalized: true,
+        accountFound: true,
+        userStatus: user.status,
+        hasPasswordHash: true,
+        passwordMatch: false,
+        errorCode: "UNAUTHORIZED",
+        safeErrorMessage: "Password verification failed (bcrypt mismatch)",
+        sessionCreated: false,
+      };
       throw AppError.unauthorized("Invalid email/phone or password");
     }
 
     // 4. Reject suspended and unverified accounts immediately
     if (user.status === "SUSPENDED") {
+      globalForAuthDebug.lastLoginAttempt = {
+        timestamp: new Date().toISOString(),
+        identifierNormalized: true,
+        accountFound: true,
+        userStatus: user.status,
+        hasPasswordHash: true,
+        passwordMatch: true,
+        errorCode: "FORBIDDEN",
+        safeErrorMessage: "Account is suspended",
+        sessionCreated: false,
+      };
       throw AppError.forbidden("Your account has been suspended. Please contact platform support.");
     }
 
     if (user.status === "PENDING_VERIFICATION") {
+      globalForAuthDebug.lastLoginAttempt = {
+        timestamp: new Date().toISOString(),
+        identifierNormalized: true,
+        accountFound: true,
+        userStatus: user.status,
+        hasPasswordHash: true,
+        passwordMatch: true,
+        errorCode: "FORBIDDEN",
+        safeErrorMessage: "Account pending verification",
+        sessionCreated: false,
+      };
       throw AppError.forbidden("Your account is pending verification. Please verify your OTP to activate your account.");
     }
 
     if (user.status !== "ACTIVE") {
+      globalForAuthDebug.lastLoginAttempt = {
+        timestamp: new Date().toISOString(),
+        identifierNormalized: true,
+        accountFound: true,
+        userStatus: user.status,
+        hasPasswordHash: true,
+        passwordMatch: true,
+        errorCode: "FORBIDDEN",
+        safeErrorMessage: `Account status is ${user.status}`,
+        sessionCreated: false,
+      };
       throw AppError.forbidden("Your account is not active. Please complete verification.");
     }
 
@@ -253,6 +370,18 @@ export class AuthService {
 
     const token = await createSessionToken(sessionData);
     const redirectUrl = getRoleDashboardPath(user.role as UserRole);
+
+    globalForAuthDebug.lastLoginAttempt = {
+      timestamp: new Date().toISOString(),
+      identifierNormalized: true,
+      accountFound: true,
+      userStatus: user.status,
+      hasPasswordHash: true,
+      passwordMatch: true,
+      errorCode: null,
+      safeErrorMessage: null,
+      sessionCreated: true,
+    };
 
     return {
       user: {
@@ -647,12 +776,29 @@ export class AuthService {
   static async requestPasswordResetOtp(identifier: string) {
     let normalized = "";
     let destType: OtpDestinationType = "EMAIL";
+    let identifierNormalized = false;
 
     try {
       const dest = normalizeDestination(identifier);
       normalized = dest.destination;
       destType = dest.destinationType;
+      identifierNormalized = true;
     } catch {
+      globalForAuthDebug.lastPasswordResetAttempt = {
+        timestamp: new Date().toISOString(),
+        destType: "EMAIL",
+        accountFound: false,
+        userStatus: null,
+        identifierNormalized: false,
+        challengeCreated: false,
+        challengePurpose: "PASSWORD_RESET",
+        deliveryProviderCalled: false,
+        resendRequestStarted: false,
+        resendStatus: null,
+        providerMessageId: null,
+        safeError: "Failed to normalize identifier format",
+      };
+
       // Return generic message even on malformed input to avoid leaking format expectations
       return {
         success: true,
@@ -666,20 +812,67 @@ export class AuthService {
 
     let user: any = null;
     try {
-      user = await prisma.user.findFirst({
-        where: destType === "EMAIL" ? { email: normalized } : { phone: normalized },
-      });
+      if (destType === "EMAIL") {
+        user = await prisma.user.findFirst({
+          where: { email: normalized },
+        });
+      } else {
+        const raw10 = normalized.replace(/^\+?91/, "");
+        user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { phone: normalized },
+              { phone: raw10 },
+              { phone: `+91${raw10}` },
+            ],
+          },
+        });
+      }
     } catch {
-      user = devUserStore.get(normalized);
+      user = devUserStore.get(normalized) || (destType === "MOBILE" ? devUserStore.get(normalized.replace(/^\+?91/, "")) : null);
     }
 
     if (!user) {
+      user = devUserStore.get(normalized) || (destType === "MOBILE" ? devUserStore.get(normalized.replace(/^\+?91/, "")) : null);
+    }
+
+    if (!user) {
+      globalForAuthDebug.lastPasswordResetAttempt = {
+        timestamp: new Date().toISOString(),
+        destType,
+        accountFound: false,
+        userStatus: null,
+        identifierNormalized: true,
+        challengeCreated: false,
+        challengePurpose: "PASSWORD_RESET",
+        deliveryProviderCalled: false,
+        resendRequestStarted: false,
+        resendStatus: null,
+        providerMessageId: null,
+        safeError: "Account lookup returned no user in database",
+      };
+
       console.warn("[AuthService] Password reset requested for non-existent account:", {
         destType,
         destinationDomain: normalized.split("@")[1] || "unknown",
         accountExists: false,
       });
     } else if (user.status === "SUSPENDED") {
+      globalForAuthDebug.lastPasswordResetAttempt = {
+        timestamp: new Date().toISOString(),
+        destType,
+        accountFound: true,
+        userStatus: user.status,
+        identifierNormalized: true,
+        challengeCreated: false,
+        challengePurpose: "PASSWORD_RESET",
+        deliveryProviderCalled: false,
+        resendRequestStarted: false,
+        resendStatus: null,
+        providerMessageId: null,
+        safeError: "User account is suspended",
+      };
+
       console.warn("[AuthService] Password reset blocked: User account is suspended", {
         userId: user.id,
       });
@@ -688,6 +881,13 @@ export class AuthService {
         userId: user.id,
         destType,
       });
+
+      let challengeCreated = false;
+      let deliveryProviderCalled = false;
+      let deliverySuccess = false;
+      let providerMessageId: string | null = null;
+      let safeError: string | null = null;
+
       try {
         const challenge = await OtpService.createOtpChallenge({
           destination: normalized,
@@ -695,7 +895,9 @@ export class AuthService {
           purpose: "PASSWORD_RESET",
           userId: user.id,
         });
+        challengeCreated = true;
 
+        deliveryProviderCalled = true;
         const delivery = await OtpDeliveryService.sendOtp({
           destination: normalized,
           destinationType: destType,
@@ -703,7 +905,10 @@ export class AuthService {
           purpose: "PASSWORD_RESET",
         });
 
+        deliverySuccess = delivery.success;
+        providerMessageId = delivery.providerMessageId || null;
         if (!delivery.success) {
+          safeError = delivery.error || "Email delivery failed";
           await OtpService.invalidateChallenge(challenge.challengeId);
           console.error(`[AuthService] Password reset OTP delivery failed:`, {
             provider: delivery.provider,
@@ -715,11 +920,28 @@ export class AuthService {
             providerMessageId: delivery.providerMessageId,
           });
         }
-      } catch (err) {
+      } catch (err: any) {
+        safeError = err?.message || "Error creating or dispatching challenge";
         if (err instanceof AppError && err.statusCode === 429) {
           throw err;
         }
         console.error("Error creating/sending password reset challenge:", err);
+      } finally {
+        const otpDebug = getLastOtpDebugState();
+        globalForAuthDebug.lastPasswordResetAttempt = {
+          timestamp: new Date().toISOString(),
+          destType,
+          accountFound: true,
+          userStatus: user.status,
+          identifierNormalized: true,
+          challengeCreated,
+          challengePurpose: "PASSWORD_RESET",
+          deliveryProviderCalled,
+          resendRequestStarted: otpDebug?.requestStarted ?? false,
+          resendStatus: otpDebug?.resendStatus ?? null,
+          providerMessageId,
+          safeError,
+        };
       }
     }
 

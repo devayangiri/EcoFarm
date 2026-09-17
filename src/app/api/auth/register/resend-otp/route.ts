@@ -33,7 +33,17 @@ export async function POST(request: Request) {
       return NextResponse.json(errorResponse, { status: 422 });
     }
 
-    const result = await AuthService.resendRegistrationOtp(parseResult.data);
+    let result: any;
+    if (parseResult.data.purpose === "PASSWORD_RESET") {
+      const identifier = parseResult.data.destination || "";
+      if (!identifier) {
+        throw AppError.badRequest("Destination is required to resend password reset code");
+      }
+      const resetResult = await AuthService.requestPasswordResetOtp(identifier);
+      result = resetResult.data;
+    } else {
+      result = await AuthService.resendRegistrationOtp(parseResult.data);
+    }
 
     const successResponse: ApiResponse<typeof result> = {
       success: true,
