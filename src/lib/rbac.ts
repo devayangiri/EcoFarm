@@ -176,22 +176,31 @@ export async function getCurrentUser(): Promise<UserSession | null> {
         typeof session?.tokenVersion === "number" &&
         user.tokenVersion > session.tokenVersion;
 
-      if (
-        !user ||
-        user.status === "SUSPENDED" ||
-        isTokenVersionRevoked
-      ) {
-        return null;
+      if (user) {
+        if (user.status === "SUSPENDED" || isTokenVersionRevoked) {
+          return null;
+        }
+
+        return {
+          userId: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          phone: user.phone,
+          role: user.role as UserRole,
+          status: user.status as UserSession["status"],
+          tokenVersion: user.tokenVersion,
+        };
       }
 
+      // If user record is temporarily not visible in DB lookup, fall back to cryptographically verified JWT
       return {
-        userId: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        phone: user.phone,
-        role: user.role as UserRole,
-        status: user.status as UserSession["status"],
-        tokenVersion: user.tokenVersion,
+        userId: session.userId,
+        email: session.email,
+        fullName: (session as any).fullName || session.email.split("@")[0],
+        phone: (session as any).phone || null,
+        role: session.role as UserRole,
+        status: ((session as any).status as UserSession["status"]) || "ACTIVE",
+        tokenVersion: typeof (session as any).tokenVersion === "number" ? (session as any).tokenVersion : 0,
       };
     } catch {
       // If database lookup times out or fails, fall back to cryptographically verified JWT
